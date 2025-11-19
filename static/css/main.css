@@ -1,0 +1,308 @@
+/* Основные стили из вашего HTML */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+    min-height: 100vh;
+    color: #e0e0e0;
+    display: flex;
+}
+
+.sidebar {
+    width: 280px;
+    background: rgba(33, 37, 41, .95);
+    border-right: 1px solid rgba(255, 255, 255, .08);
+    padding: 20px 0;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+}
+
+.navbar-brand {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+    text-align: center;
+}
+
+.navbar-brand h3 {
+    color: #4cc9f0;
+    font-size: 1.5em;
+    font-weight: 300;
+}
+
+.navbar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 15px;
+}
+
+.nav-item {
+    margin-bottom: 5px;
+}
+
+.nav-link {
+    color: #b0b0b0;
+    padding: 15px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: block;
+    transition: all .25s;
+    cursor: pointer;
+}
+
+.nav-link.active,
+.nav-link:hover {
+    background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+    color: #fff;
+}
+
+.top-navbar {
+    background: rgba(33, 37, 41, .95);
+    padding: 15px 30px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 280px;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4361ee, #4cc9f0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: bold;
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 280px;
+    margin-top: 80px;
+    padding: 20px;
+}
+
+.public-content {
+    margin: 0;
+    padding: 20px;
+    width: 100%;
+}
+
+.content-section {
+    display: none;
+    animation: fadeIn .4s;
+}
+
+.content-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section-title {
+    color: #fff;
+    font-size: 1.4em;
+    margin-bottom: 12px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, .04);
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, .06);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    background: rgba(67, 97, 238, .12);
+    color: #4cc9f0;
+    padding: 12px;
+    text-align: left;
+}
+
+.table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4361ee, #4cc9f0);
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #f72585, #b5179e);
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: rgba(255, 255, 255, .03);
+    color: #fff;
+}
+
+.small {
+    font-size: 0.85em;
+    color: #b0b0b0;
+}
+
+/* Стили для статусов */
+.status-active {
+    color: #4ade80;
+}
+
+.status-inactive {
+    color: #f87171;
+}
+
+.status-maintenance {
+    color: #fbbf24;
+}
+
+/* Адаптивность */
+@media (max-width: 900px) {
+    .sidebar {
+        display: none;
+    }
+    
+    .top-navbar {
+        left: 0;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Стили для сообщений */
+.messages {
+    margin-bottom: 20px;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.alert-success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+
+.alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+.alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+}
+
+/* Исправления для API алерта */
+.api-alert {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+    padding: 15px 20px;
+    border-radius: 0;
+    margin-bottom: 0;
+    border-left: 4px solid #f59e0b;
+    position: fixed;
+    top: 71px; /* Высота top-navbar */
+    left: 280px; /* Ширина sidebar */
+    right: 0;
+    z-index: 999;
+    backdrop-filter: blur(10px);
+}
+
+/* Для мобильных устройств */
+@media (max-width: 900px) {
+    .api-alert {
+        left: 0;
+        top: 71px;
+    }
+}
+
+/* Корректировка основного контента при наличии алерта */
+body.has-api-alert .main-content {
+    margin-top: 120px; /* Увеличиваем отступ */
+}
+
+/* Анимация появления алерта */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.api-alert {
+    animation: slideDown 0.3s ease-out;
+}
+
