@@ -122,8 +122,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'host',           # Имя вашей базы данных
         'USER': 'host',                 # Ваш MySQL пользователь
-        'PASSWORD': '4fHRkYbYAkHjpCa7', # Ваш пароль
-        'HOST': '91.142.73.52',         # IP MySQL сервера
+        'PASSWORD': '4fHR', # Ваш пароль
+        'HOST': '91.',         # IP MySQL сервера
         'PORT': '3306',                 # Обычно 3306
         'OPTIONS': {
             'charset': 'utf8mb4',
@@ -185,7 +185,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 
 GAMEAP_URL = 'http://109.172.85.115'  # Без слеша в конце!
-GAMEAP_API_TOKEN = '1|FPOaSFmLQZuTul1p4TSDU19sUPJorxIi30qRDMw1'
+GAMEAP_API_TOKEN = '1|FPOaSFmIi30qRDMw1'
 
 
 DEFAULT_GAME_ID = 1
@@ -203,7 +203,7 @@ DEFAULT_SERVER_PORT = 'auto'
 # Нейросеть - НЕ ТРОГАТЬ
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'https://koteichcatalog.ru/ollama')
 OLLAMA_USERNAME = os.getenv('OLLAMA_USERNAME', 'ollama')
-OLLAMA_PASSWORD = os.getenv('OLLAMA_PASSWORD', 'secret123')
+OLLAMA_PASSWORD = os.getenv('OLLAMA_PASSWORD', 'se123')
 DEFAULT_MODEL = os.getenv('DEFAULT_MODEL', 'llama3.2:3b')
 OLLAMA_TIMEOUT = int(os.getenv('OLLAMA_TIMEOUT', '120'))  # Таймаут в секундах
 
