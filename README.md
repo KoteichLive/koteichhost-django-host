@@ -43,3 +43,5 @@ Composer
 
 помогите автору
 https://donatepay.ru/don/Koteich_live
+
+https://www.donationalerts.com/r/koteich_live
