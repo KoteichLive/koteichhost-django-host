@@ -1,0 +1,502 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Мои серверы - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <h2 class="section-title">🖥️ Мои серверы</h2>
+    
+    <!-- Статус API -->
+    {% if not api_available %}
+    <div class="alert alert-warning" style="margin-bottom: 20px;">
+        ⚠️ GameAP API временно недоступен. Управление серверами может работать некорректно.
+    </div>
+    {% endif %}
+    
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+        <a href="{% url 'servers:server_ordering' %}" class="btn-primary">➕ Заказать сервер</a>
+        <a href="{% url 'monitoring:user_servers' %}" class="btn-primary">📊 Мониторинг</a>
+        <button class="btn-primary" onclick="refreshServerList()" {% if not api_available %}disabled{% endif %}>
+            🔄 Обновить
+        </button>
+    </div>
+    
+    {% if servers %}
+    <div class="stats-grid">
+        {% for server in servers %}
+        <div class="stat-card server-card" id="server-{{ server.id }}">
+            <div class="server-header">
+                <h4>{{ server.name }}</h4>
+                <span class="server-badge server-badge-{{ server.status|default:'unknown' }}">
+                    {{ server.status|default:"unknown"|title }}
+                </span>
+            </div>
+            
+            <div class="server-info">
+                <div class="info-row">
+                    <span class="label">Мод:</span>
+                    <span class="value">{{ server.mod|default:"Unknown"|upper }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Слоты:</span>
+                    <span class="value">{{ server.slots|default:"0" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">IP:Порт:</span>
+                    <span class="value">{{ server.ip|default:"0.0.0.0" }}:{{ server.port|default:"0" }}</span>
+                </div>
+                {% if server.plan %}
+                <div class="info-row">
+                    <span class="label">Тариф:</span>
+                    <span class="value">{{ server.plan|title }}</span>
+                </div>
+                {% endif %}
+                {% if server.created_at %}
+                <div class="info-row">
+                    <span class="label">Создан:</span>
+                    <span class="value">{{ server.created_at|date:"d.m.Y" }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if server.status %}
+            <div class="server-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Игроки</span>
+                    <span class="stat-value">{{ server.online|default:"0" }}/{{ server.slots|default:"0" }}</span>
+                </div>
+                {% if server.cpu_usage %}
+                <div class="stat-item">
+                    <span class="stat-label">CPU</span>
+                    <span class="stat-value">{{ server.cpu_usage|default:"0" }}%</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="server-actions">
+                {% if server.status != 'active' and server.status != 'running' %}
+                <button class="btn-action btn-start" 
+                        onclick="controlServer({{ server.id }}, 'start')" 
+                        {% if not api_available %}disabled{% endif %}
+                        title="Запустить сервер">
+                    ▶️ Старт
+                </button>
+                {% endif %}
+                
+                {% if server.status == 'active' or server.status == 'running' %}
+                <button class="btn-action btn-stop" 
+                        onclick="controlServer({{ server.id }}, 'stop')"
+                        {% if not api_available %}disabled{% endif %}
+                        title="Остановить сервер">
+                    ⏹️ Стоп
+                </button>
+                <button class="btn-action btn-restart" 
+                        onclick="controlServer({{ server.id }}, 'restart')"
+                        {% if not api_available %}disabled{% endif %}
+                        title="Перезагрузить сервер">
+                    🔄 Рестарт
+                </button>
+                {% endif %}
+                
+                <button class="btn-action btn-status" 
+                        onclick="getServerStatus({{ server.id }})"
+                        {% if not api_available %}disabled{% endif %}
+                        title="Подробный статус">
+                    📊 Статус
+                </button>
+                
+                {% if server.ip and server.port and server.port != 0 %}
+                <button class="btn-action btn-connect" 
+                        onclick="connectToServer('{{ server.ip }}', {{ server.port }})"
+                        title="Подключиться к серверу">
+                    🔗 Подключиться
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🖥️</div>
+        <h3>У вас нет серверов</h3>
+        <p>Закажите свой первый игровой сервер и начните играть!</p>
+        <a href="{% url 'servers:server_ordering' %}" class="btn-primary">
+            Заказать сервер
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Модальное окно для статуса -->
+<div id="statusModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>📊 Статус сервера</h3>
+        <div id="statusContent"></div>
+    </div>
+</div>
+
+<script>
+function controlServer(serverId, action) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    // Показываем индикатор загрузки
+    button.innerHTML = '⏳...';
+    button.disabled = true;
+    
+    fetch(`/servers/control/${serverId}/${action}/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            // Обновляем список через 2 секунды
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            showNotification('Ошибка: ' + data.message, 'error');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    })
+    .catch(error => {
+        showNotification('Ошибка сети', 'error');
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+function getServerStatus(serverId) {
+    fetch(`/servers/status/${serverId}/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showNotification('Ошибка: ' + data.error, 'error');
+        } else {
+            showStatusModal(data);
+        }
+    })
+    .catch(error => {
+        showNotification('Ошибка сети', 'error');
+    });
+}
+
+function showStatusModal(statusData) {
+    const modal = document.getElementById('statusModal');
+    const content = document.getElementById('statusContent');
+    
+    let html = `
+        <div class="status-grid">
+            <div class="status-item">
+                <label>Статус:</label>
+                <span class="status-badge status-${statusData.status || 'unknown'}">
+                    ${statusData.status || 'unknown'}
+                </span>
+            </div>
+            <div class="status-item">
+                <label>Процесс:</label>
+                <span>${statusData.process_active ? '🟢 Активен' : '🔴 Не активен'}</span>
+            </div>
+            <div class="status-item">
+                <label>Игроки онлайн:</label>
+                <span>${statusData.online || 0}</span>
+            </div>
+            <div class="status-item">
+                <label>Использование CPU:</label>
+                <span>${statusData.cpu_usage || 0}%</span>
+            </div>
+            <div class="status-item">
+                <label>Использование RAM:</label>
+                <span>${statusData.memory_usage || 0}%</span>
+            </div>
+            ${statusData.last_process_check ? `
+            <div class="status-item">
+                <label>Последняя проверка:</label>
+                <span>${new Date(statusData.last_process_check).toLocaleString()}</span>
+            </div>
+            ` : ''}
+        </div>
+    `;
+    
+    content.innerHTML = html;
+    modal.style.display = 'block';
+}
+
+function connectToServer(ip, port) {
+    const address = `${ip}:${port}`;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(address).then(() => {
+            showNotification('Адрес скопирован в буфер обмена: ' + address, 'success');
+        });
+    } else {
+        showNotification('Адрес сервера: ' + address, 'info');
+    }
+}
+
+function refreshServerList() {
+    location.reload();
+}
+
+function showNotification(message, type = 'info') {
+    // Простая реализация уведомлений
+    alert(message);
+}
+
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Закрытие модального окна
+document.querySelector('.close').addEventListener('click', function() {
+    document.getElementById('statusModal').style.display = 'none';
+});
+
+// Закрытие модального при клике вне его
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('statusModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+});
+</script>
+
+<style>
+.server-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.server-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.server-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.server-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.server-badge-active,
+.server-badge-running {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.server-badge-stopped,
+.server-badge-offline {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.server-badge-unknown {
+    background: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+}
+
+.server-info {
+    margin-bottom: 15px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.info-row .label {
+    color: #9ca3af;
+}
+
+.info-row .value {
+    font-weight: 500;
+}
+
+.server-stats {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+}
+
+.stat-item {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.8em;
+    color: #9ca3af;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    display: block;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.server-actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    min-width: 60px;
+}
+
+.btn-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-start { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.btn-stop { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.btn-restart { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.btn-status { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+.btn-connect { background: rgba(249, 115, 22, 0.2); color: #f97316; }
+
+.btn-action:hover:not(:disabled) {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    font-size: 4em;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+/* Модальное окно */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #1f2937;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+
+.close {
+    color: #9ca3af;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover {
+    color: #fff;
+}
+
+.status-grid {
+    display: grid;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.status-active,
+.status-running {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.status-stopped,
+.status-offline {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.status-unknown {
+    background: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+}
+
+@media (max-width: 768px) {
+    .server-actions {
+        flex-direction: column;
+    }
+    
+    .server-stats {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .stat-item {
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+    }
+}
+</style>
+{% endblock %}

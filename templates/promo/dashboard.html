@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Промокоды - Koteich Host{% endblock %}
+
+{% block content %}
+<style>
+    /* Принудительно делаем весь текст белым */
+    .container-fluid * {
+        color: #ffffff !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Дополнительные стили для лучшей читаемости */
+    .container-fluid h1,
+    .container-fluid h2,
+    .container-fluid h3,
+    .container-fluid h4,
+    .container-fluid h5,
+    .container-fluid h6 {
+        color: #ffffff !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+    }
+    
+    .container-fluid p,
+    .container-fluid span,
+    .container-fluid td,
+    .container-fluid th {
+        color: #ffffff !important;
+    }
+    
+    /* Убедимся, что ссылки тоже белые */
+    .container-fluid a {
+        color: #ffffff !important;
+    }
+    
+    /* Для лучшего контраста на темном фоне */
+    .container-fluid .text-muted {
+        color: #cccccc !important;
+    }
+</style>
+<div class="container-fluid">
+    <h1 class="section-title">🎫 Промокоды</h1>
+    
+    <!-- Статистика -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>{{ stats.total_created }}</h3>
+            <p class="small">Создано промокодов</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ stats.total_activated }}</h3>
+            <p class="small">Активировано</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ stats.total_amount_created }}₽</h3>
+            <p class="small">Всего создано</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ stats.total_amount_received }}₽</h3>
+            <p class="small">Всего получено</p>
+        </div>
+    </div>
+
+    <!-- Действия -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Действия с промокодами</h5>
+            <div class="d-flex gap-3 flex-wrap">
+                <a href="{% url 'promo:create_promo' %}" class="btn btn-primary">
+                    🎫 Создать промокод
+                </a>
+                <a href="{% url 'promo:activate_promo' %}" class="btn btn-success">
+                    ✅ Активировать промокод
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Последние созданные промокоды -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Последние созданные промокоды</h5>
+            
+            {% if created_promos %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Код</th>
+                            <th>Сумма</th>
+                            <th>Статус</th>
+                            <th>Создан</th>
+                            <th>Действует до</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for promo in created_promos %}
+                        <tr>
+                            <td><strong>{{ promo.code }}</strong></td>
+                            <td>{{ promo.amount }}₽</td>
+                            <td>
+                                {% if promo.status == 'active' %}
+                                    <span class="status-active">Активный</span>
+                                {% elif promo.status == 'used' %}
+                                    <span class="status-inactive">Использован</span>
+                                {% elif promo.status == 'expired' %}
+                                    <span class="status-maintenance">Просрочен</span>
+                                {% else %}
+                                    <span>{{ promo.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ promo.created_at|date:"d.m.Y H:i" }}</td>
+                            <td>{{ promo.expires_at|date:"d.m.Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">Вы еще не создали ни одного промокода</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Последние активированные промокоды -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Последние активированные промокоды</h5>
+            
+            {% if activated_promos %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Код</th>
+                            <th>Сумма</th>
+                            <th>От кого</th>
+                            <th>Активирован</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for promo in activated_promos %}
+                        <tr>
+                            <td><strong>{{ promo.code }}</strong></td>
+                            <td class="text-success">+{{ promo.amount }}₽</td>
+                            <td>{{ promo.creator.username }}</td>
+                            <td>{{ promo.activated_at|date:"d.m.Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">Вы еще не активировали ни одного промокода</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<style>
+.container-fluid { color: black !important; }
+h1, h2, h3, h4, h5, h6 { color: black !important; }
+p, span, td, th { color: black !important; }
+</style>
+{% endblock %}

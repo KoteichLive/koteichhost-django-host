@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Панель управления - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <h2 class="section-title">📊 Панель управления</h2>
+    
+    <!-- Статистика -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div style="font-size:28px">💰</div>
+            <div style="font-size:20px;font-weight:600;margin-top:8px">{{ user_balance }} ₽</div>
+            <div class="small">Баланс</div>
+        </div>
+        <div class="stat-card">
+            <div style="font-size:28px">🖥️</div>
+            <div style="font-size:20px;font-weight:600;margin-top:8px" id="serversCount">{{ servers|length }}</div>
+            <div class="small">Мои серверы</div>
+        </div>
+        <div class="stat-card">
+            <div style="font-size:28px">🟢</div>
+            <div style="font-size:20px;font-weight:600;margin-top:8px" id="onlineServers">{{ online_servers }}</div>
+            <div class="small">Онлайн серверов</div>
+        </div>
+        <div class="stat-card">
+            <div style="font-size:28px">👥</div>
+            <div style="font-size:20px;font-weight:600;margin-top:8px" id="onlinePlayers">{{ total_players }}</div>
+            <div class="small">Игроков онлайн</div>
+        </div>
+    </div>
+
+    <!-- Быстрые действия -->
+    <div class="stats-grid" style="margin-bottom: 20px;">
+        <div class="stat-card" style="text-align: center; cursor: pointer;" onclick="location.href='{% url 'servers:server_ordering' %}'">
+            <div style="font-size:32px">🚀</div>
+            <div style="font-weight:600;margin-top:8px">Заказать сервер</div>
+            <div class="small">Создать новый</div>
+        </div>
+        <div class="stat-card" style="text-align: center; cursor: pointer;" onclick="location.href='{% url 'monitoring:user_servers' %}'">
+            <div style="font-size:32px">📈</div>
+            <div style="font-weight:600;margin-top:8px">Мониторинг</div>
+            <div class="small">Статус серверов</div>
+        </div>
+        <div class="stat-card" style="text-align: center; cursor: pointer;" onclick="location.href='{% url 'promo:dashboard' %}'">
+            <div style="font-size:32px">🎫</div>
+            <div style="font-weight:600;margin-top:8px">Промокоды</div>
+            <div class="small">Активировать</div>
+        </div>
+        <div class="stat-card" style="text-align: center; cursor: pointer;" onclick="location.href='{% url 'auction:auction' %}'">
+            <div style="font-size:32px">🎯</div>
+            <div style="font-weight:600;margin-top:8px">Аукцион</div>
+            <div class="small">Купить/продать</div>
+        </div>
+    </div>
+
+    <!-- Мои серверы -->
+    <div class="stat-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <h3 class="section-title">🎮 Мои серверы</h3>
+            <div>
+                <button class="btn-primary" onclick="Dashboard.refreshServers()">🔄 Обновить</button>
+                <button class="btn-primary" onclick="Dashboard.exportServersCSV()">📥 Экспорт</button>
+            </div>
+        </div>
+        
+        {% if servers %}
+        <div style="overflow-x: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Мод</th>
+                        <th>Слоты</th>
+                        <th>Статус</th>
+                        <th>Игроки</th>
+                        <th>Адрес</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="serversTable">
+                    {% for server in servers %}
+                    <tr>
+                        <td>
+                            <strong>{{ server.name|default:"Без названия" }}</strong>
+                            {% if server.plan %}
+                            <br><small class="text-muted">{{ server.plan|title }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ server.mod|default:"Не указан"|upper }}</td>
+                        <td>{{ server.slots|default:"0" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ server.status }}">
+                                {% if server.process_active %}
+                                🟢 Online
+                                {% else %}
+                                🔴 Offline
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <strong style="color: {% if server.online_players > 0 %}#4ade80{% else %}#9ca3af{% endif %};">
+                                {{ server.online_players }}/{{ server.slots }}
+                            </strong>
+                        </td>
+                        <td>
+                            <code>{{ server.address|default:"Не указан" }}</code>
+                            {% if server.process_active %}
+                            <button class="btn-primary btn-sm" onclick="copyToClipboard('{{ server.address }}')" 
+                                    style="padding: 2px 6px; margin-left: 5px;" title="Копировать адрес">📋</button>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <a href="{% url 'monitoring:server_detail' server.id %}" class="btn-primary btn-sm">📊</a>
+                                <a href="{% url 'servers:server_status' server.id %}" class="btn-primary btn-sm">⚙️</a>
+                                <button class="btn-primary btn-sm" onclick="Dashboard.extendServer('{{ server.id }}')">⏱️</button>
+                                {% if not server.on_auction %}
+                                <button class="btn-danger btn-sm" onclick="Dashboard.putOnAuction('{{ server.id }}')">🎯</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 3em; opacity: 0.5;">🖥️</div>
+            <h4>У вас нет серверов</h4>
+            <p>Закажите свой первый игровой сервер и начните играть!</p>
+            <a href="{% url 'servers:server_ordering' %}" class="btn-primary" style="margin-top: 15px;">
+                🚀 Заказать сервер
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Dashboard модуль
+const Dashboard = {
+    // Инициализация dashboard
+    init() {
+        this.updateStatistics();
+        console.log('Dashboard initialized');
+        
+        // Автоматическое обновление каждые 30 секунд
+        setInterval(() => this.refreshServers(), 30000);
+    },
+
+    // Загрузка данных серверов
+    async refreshServers() {
+        try {
+            const response = await fetch('{% url "dashboard:api_servers" %}');
+            if (!response.ok) throw new Error('Network error');
+            
+            const servers = await response.json();
+            this.updateServersTable(servers);
+            this.updateStatistics(servers);
+            showNotification('Данные серверов обновлены', 'success');
+        } catch (error) {
+            console.error('Ошибка загрузки данных:', error);
+            showNotification('Ошибка при обновлении данных', 'error');
+        }
+    },
+
+    // Обновление статистики
+    updateStatistics(servers = null) {
+        if (servers) {
+            // Обновляем счетчики
+            document.getElementById('serversCount').textContent = servers.length;
+            
+            // Считаем онлайн серверы и игроков
+            const onlineServers = servers.filter(s => s.process_active).length;
+            const totalPlayers = servers.reduce((sum, server) => sum + (server.online_players || 0), 0);
+            
+            document.getElementById('onlineServers').textContent = onlineServers;
+            document.getElementById('onlinePlayers').textContent = totalPlayers;
+        }
+    },
+
+    // Обновление таблицы серверов
+    updateServersTable(servers) {
+        const tbody = document.getElementById('serversTable');
+        
+        if (!servers || servers.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 20px;">
+                        Нет активных серверов
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = servers.map(server => `
+            <tr>
+                <td>
+                    <strong>${escapeHtml(server.name || 'Без названия')}</strong>
+                    ${server.plan ? `<br><small class="text-muted">${server.plan}</small>` : ''}
+                </td>
+                <td>${escapeHtml(server.mod || 'Не указан').toUpperCase()}</td>
+                <td>${server.slots || '0'}</td>
+                <td>
+                    <span class="status-badge status-${server.status}">
+                        ${server.process_active ? '🟢 Online' : '🔴 Offline'}
+                    </span>
+                </td>
+                <td>
+                    <strong style="color: ${server.online_players > 0 ? '#4ade80' : '#9ca3af'};">
+                        ${server.online_players}/${server.slots}
+                    </strong>
+                </td>
+                <td>
+                    <code>${escapeHtml(server.address || 'Не указан')}</code>
+                    ${server.process_active ? 
+                        `<button class="btn-primary btn-sm" onclick="copyToClipboard('${server.address}')" 
+                                style="padding: 2px 6px; margin-left: 5px;" title="Копировать адрес">📋</button>` : ''}
+                </td>
+                <td>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <a href="/monitoring/server/${server.id}/" class="btn-primary btn-sm">📊</a>
+                        <a href="/servers/status/${server.id}/" class="btn-primary btn-sm">⚙️</a>
+                        <button class="btn-primary btn-sm" onclick="Dashboard.extendServer('${server.id}')">⏱️</button>
+                        ${!server.on_auction ? 
+                            `<button class="btn-danger btn-sm" onclick="Dashboard.putOnAuction('${server.id}')">🎯</button>` : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    // Продление сервера
+    async extendServer(serverId) {
+        const amount = prompt('Введите сумму продления (руб):', '100');
+        if (amount && !isNaN(amount)) {
+            try {
+                const response = await fetch(`/dashboard/api/servers/${serverId}/extend/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({ amount: parseFloat(amount) })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message || 'Сервер успешно продлен', 'success');
+                    this.refreshServers();
+                } else {
+                    showNotification(result.error || 'Ошибка продления сервера', 'error');
+                }
+            } catch (error) {
+                showNotification('Ошибка продления сервера', 'error');
+            }
+        }
+    },
+
+    // Выставление на аукцион
+    async putOnAuction(serverId) {
+        if (confirm('Вы уверены, что хотите выставить сервер на аукцион?')) {
+            try {
+                const response = await fetch(`/dashboard/api/servers/${serverId}/auction/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message || 'Сервер выставлен на аукцион', 'success');
+                    this.refreshServers();
+                } else {
+                    showNotification(result.error || 'Ошибка выставления на аукцион', 'error');
+                }
+            } catch (error) {
+                showNotification('Ошибка выставления на аукцион', 'error');
+            }
+        }
+    },
+
+    // Экспорт в CSV
+    exportServersCSV() {
+        showNotification('Функция экспорта в CSV будет доступна в ближайшее время', 'info');
+    }
+};
+
+// Вспомогательные функции
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showNotification('Адрес скопирован: ' + text, 'success');
+    });
+}
+
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Инициализация dashboard при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    Dashboard.init();
+});
+</script>
+
+<style>
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.status-active, .status-running {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.status-inactive, .status-stopped {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.status-unknown {
+    background: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+    border: 1px solid rgba(156, 163, 175, 0.3);
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 0.8em;
+}
+
+.stat-card[style*="cursor: pointer"]:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

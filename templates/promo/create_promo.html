@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Создать промокод - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="section-title">🎫 Создать промокод</h1>
+                    
+                    <!-- Информация о балансе -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h6>Ваш баланс: <strong class="text-success">{{ user.balance }}₽</strong></h6>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group mb-3">
+                            <label for="id_amount">Сумма промокода (₽):</label>
+                            <input type="number" name="amount" id="id_amount" 
+                                   class="form-control" min="1" max="{{ user.balance }}" 
+                                   step="1" value="100" required>
+                            <small class="form-text text-muted">
+                                Сумма будет списана с вашего баланса. Минимум: 1₽
+                            </small>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label for="id_expires_at">Срок действия (дней):</label>
+                            <select name="expires_days" id="id_expires_at" class="form-control">
+                                <option value="1">1 день</option>
+                                <option value="7" selected>7 дней</option>
+                                <option value="30">30 дней</option>
+                                <option value="90">90 дней</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-primary">
+                                🎫 Создать промокод
+                            </button>
+                            <a href="{% url 'promo:dashboard' %}" class="btn btn-secondary">
+                                Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

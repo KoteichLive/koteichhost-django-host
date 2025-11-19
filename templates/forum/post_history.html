@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}История правок - Форум{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <!-- Навигация -->
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'forum:forum' %}" class="small">Форум</a> 
+        > <a href="{% url 'forum:category' post.topic.category.id %}" class="small">{{ post.topic.category.name }}</a>
+        > <a href="{% url 'forum:topic_posts' post.topic.id %}" class="small">{{ post.topic.title|truncatewords:5 }}</a>
+        > <span class="small">История правок</span>
+    </div>
+
+    <div class="stat-card">
+        <h2 class="section-title">📋 История правок статьи</h2>
+        
+        <div style="background: rgba(76, 201, 240, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div class="small">
+                <strong>Тема:</strong> {{ post.topic.title }}<br>
+                <strong>Автор:</strong> {{ post.author.username }}<br>
+                <strong>Создано:</strong> {{ post.created_at|date:"d.m.Y H:i" }}
+            </div>
+        </div>
+
+        {% if edits %}
+            <!-- Текущая версия -->
+            <div style="margin-bottom: 25px;">
+                <h4 style="color: #4ade80; margin-bottom: 10px;">✅ Текущая версия</h4>
+                <div style="background: rgba(76, 222, 128, 0.1); padding: 15px; border-radius: 8px; border-left: 4px solid #4ade80;">
+                    <div style="margin-bottom: 10px; color: #888;">
+                        <strong>Содержание статьи:</strong>
+                    </div>
+                    <div style="line-height: 1.6;">
+                        {{ post.content|linebreaks }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- История правок -->
+            <h4 style="margin-bottom: 15px;">🕒 История изменений</h4>
+            {% for edit in edits %}
+            <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 4px solid #fbbf24;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <div>
+                        <strong>👤 {{ edit.editor.username }}</strong>
+                        <span class="small">отредактировал</span>
+                    </div>
+                    <div class="small" style="color: #888;">
+                        📅 {{ edit.edited_at|date:"d.m.Y H:i" }}
+                    </div>
+                </div>
+                
+                {% if edit.reason %}
+                <div style="margin-bottom: 10px; padding: 8px; background: rgba(251, 191, 36, 0.1); border-radius: 4px;">
+                    <strong>Причина:</strong> {{ edit.reason }}
+                </div>
+                {% endif %}
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <div class="small" style="color: #f87171; margin-bottom: 5px;">❌ Было:</div>
+                        <div style="background: rgba(244, 67, 54, 0.1); padding: 10px; border-radius: 4px; font-size: 0.9em; line-height: 1.4;">
+                            {{ edit.old_content|linebreaks }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="small" style="color: #4ade80; margin-bottom: 5px;">✅ Стало:</div>
+                        <div style="background: rgba(76, 222, 128, 0.1); padding: 10px; border-radius: 4px; font-size: 0.9em; line-height: 1.4;">
+                            {{ edit.new_content|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="text-align: center; padding: 30px; color: #888;">
+                <h4>📭 История правок отсутствует</h4>
+                <p>Эта статья еще не редактировалась</p>
+            </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{% url 'forum:topic_posts' post.topic.id %}" class="btn-primary">
+                ↩️ Вернуться к теме
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

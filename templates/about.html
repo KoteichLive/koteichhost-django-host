@@ -1,0 +1,568 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}О проекте - KoteichHost.ru{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <!-- Hero секция -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <div class="hero-badge">С 2023 года</div>
+            <h1 class="hero-title">🚀 KoteichHost.ru</h1>
+            <p class="hero-subtitle">Премиальный хостинг игровых серверов</p>
+            
+            {% if api_available %}
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="stat-icon">🖥️</div>
+                    <div class="stat-number">{{ total_servers|default:"0" }}</div>
+                    <div class="stat-label">серверов</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-number">{{ total_players|default:"0" }}</div>
+                    <div class="stat-label">игроков</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-number">91.1%</div>
+                    <div class="stat-label">аптайм</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Основной контент в две колонки -->
+    <div class="main-content-grid">
+        <!-- Левая колонка -->
+        <div class="content-column">
+            <!-- Преимущества -->
+            <div class="features-section">
+                <h2 class="section-title">🎯 Преимущества</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-content">
+                            <h3>Производительность</h3>
+                            <p>Современное оборудование</p>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <div class="feature-content">
+                            <h3>DDoS защита</h3>
+                            <p>Многоуровневая защита</p>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💾</div>
+                        <div class="feature-content">
+                            <h3>Авто-бекапы</h3>
+                            <p>Резервное копирование</p>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔧</div>
+                        <div class="feature-content">
+                            <h3>Поддержка 24/7</h3>
+                            <p>Круглосуточная помощь</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Игровые моды -->
+            <div class="games-section">
+                <h2 class="section-title">🎮 Игровые моды</h2>
+                <div class="games-grid">
+                    <div class="game-card">
+                        <div class="game-icon">🎯</div>
+                        <div class="game-info">
+                            <h3>SA-MP</h3>
+                            <p>от 50₽/мес</p>
+                        </div>
+                    </div>
+                    <div class="game-card">
+                        <div class="game-icon">⚔️</div>
+                        <div class="game-info">
+                            <h3>CR-MP</h3>
+                            <p>от 60₽/мес</p>
+                        </div>
+                    </div>
+                    <div class="game-card">
+                        <div class="game-icon">🧱</div>
+                        <div class="game-info">
+                            <h3>Minecraft</h3>
+                            <p>от 100₽/мес</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Правая колонка -->
+        <div class="content-column">
+            <!-- Технологии -->
+            <div class="tech-section">
+                <h2 class="section-title">🛠️ Технологии</h2>
+                <div class="tech-grid">
+                    <a href="/forum/topic/7/" target="_blank" class="tech-item">
+                        <span class="tech-dot" style="background: #667eea;"></span>
+                        <span>GameAP</span>
+                    </a>
+                    <a href="/forum/topic/8/" target="_blank" class="tech-item">
+                        <span class="tech-dot" style="background: #10b981;"></span>
+                        <span>Django</span>
+                    </a>
+                    <a href="/forum/topic/9/" target="_blank" class="tech-item">
+                        <span class="tech-dot" style="background: #0ea5e9;"></span>
+                        <span>Docker</span>
+                    </a>
+                    <a href="/forum/topic/10/" target="_blank" class="tech-item">
+                        <span class="tech-dot" style="background: #f59e0b;"></span>
+                        <span>Python</span>
+                    </a>
+                    <a href="/forum/topic/11/" target="_blank" class="tech-item">
+                        <span class="tech-dot" style="background: #ef4444;"></span>
+                        <span>Redis</span>
+                    </a>
+                    <a href="/forum/topic/12/" target="_blank" class="tech-item">
+                        <span class="tech-dot" style="background: #8b5cf6;"></span>
+                        <span>Mysql</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Контакты -->
+            <div class="contacts-section">
+                <h2 class="section-title">📞 Контакты</h2>
+                <div class="contacts-list">
+                    <div class="contact-item">
+                        <div class="contact-icon">📧</div>
+                        <div class="contact-details">
+                            <div class="contact-label">Email</div>
+                            <div class="contact-value">89886925254cah@gmail.com</div>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">💬</div>
+                        <div class="contact-details">
+                            <div class="contact-label">Telegram</div>
+                            <div class="contact-value">@qwerty89271</div>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">🕒</div>
+                        <div class="contact-details">
+                            <div class="contact-label">Поддержка</div>
+                            <div class="contact-value">24/7</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Призыв к действию -->
+            <div class="cta-section">
+                {% if user.is_authenticated %}
+                    {% if api_available %}
+                    <a href="{% url 'servers:server_ordering' %}" class="cta-button">
+                        🚀 Заказать сервер
+                    </a>
+                    {% else %}
+                    <button class="cta-button disabled" disabled>
+                        ⏳ Сервис недоступен
+                    </button>
+                    {% endif %}
+                {% else %}
+                <div class="auth-buttons">
+                    <a href="{% url 'accounts:register' %}" class="auth-btn primary">Регистрация</a>
+                    <a href="{% url 'accounts:login' %}" class="auth-btn secondary">Войти</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Hero секция */
+    .hero-section {
+        background: linear-gradient(135deg, 
+            rgba(76, 201, 240, 0.08) 0%, 
+            rgba(67, 97, 238, 0.05) 50%, 
+            rgba(76, 201, 240, 0.08) 100%);
+        border-radius: 16px;
+        padding: 30px;
+        margin-bottom: 30px;
+        text-align: center;
+        border: 1px solid rgba(76, 201, 240, 0.15);
+        backdrop-filter: blur(10px);
+    }
+
+    .hero-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #4cc9f0, #4361ee);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 500;
+        margin-bottom: 15px;
+    }
+
+    .hero-title {
+        font-size: 2.2em;
+        font-weight: 700;
+        background: linear-gradient(135deg, #4cc9f0, #4361ee);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+    }
+
+    .hero-subtitle {
+        font-size: 1.1em;
+        color: #b0b0b0;
+        margin-bottom: 25px;
+    }
+
+    .hero-stats {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+
+    .hero-stat {
+        text-align: center;
+    }
+
+    .stat-icon {
+        font-size: 1.8em;
+        margin-bottom: 8px;
+        opacity: 0.9;
+    }
+
+    .stat-number {
+        font-size: 1.5em;
+        font-weight: 700;
+        color: #4cc9f0;
+        margin-bottom: 4px;
+    }
+
+    .stat-label {
+        color: #888;
+        font-size: 0.8em;
+        text-transform: lowercase;
+    }
+
+    /* Основная сетка контента */
+    .main-content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .content-column {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    /* Секции */
+    .section-title {
+        font-size: 1.2em;
+        color: #e0e0e0;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    /* Преимущества */
+    .features-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .feature-card {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        padding: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(76, 201, 240, 0.2);
+        transform: translateX(5px);
+    }
+
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2em;
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.2), rgba(67, 97, 238, 0.2));
+        flex-shrink: 0;
+    }
+
+    .feature-content h3 {
+        margin: 0 0 4px 0;
+        color: #e0e0e0;
+        font-size: 0.95em;
+        font-weight: 600;
+    }
+
+    .feature-content p {
+        margin: 0;
+        color: #888;
+        font-size: 0.85em;
+    }
+
+    /* Игровые моды */
+    .games-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .game-card {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        padding: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .game-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(76, 201, 240, 0.2);
+    }
+
+    .game-icon {
+        font-size: 1.5em;
+        width: 40px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .game-info h3 {
+        margin: 0 0 2px 0;
+        color: #e0e0e0;
+        font-size: 0.95em;
+        font-weight: 600;
+    }
+
+    .game-info p {
+        margin: 0;
+        color: #4ade80;
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+
+    /* Технологии */
+    .tech-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .tech-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        font-size: 0.85em;
+        color: #b0b0b0;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+
+    .tech-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateY(-1px);
+        color: #b0b0b0;
+        text-decoration: none;
+    }
+
+    .tech-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    /* Контакты */
+    .contacts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .contact-item:hover {
+        background: rgba(76, 201, 240, 0.08);
+        border-color: rgba(76, 201, 240, 0.2);
+    }
+
+    .contact-icon {
+        font-size: 1.3em;
+        width: 30px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .contact-details {
+        flex: 1;
+    }
+
+    .contact-label {
+        color: #e0e0e0;
+        font-size: 0.9em;
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+
+    .contact-value {
+        color: #888;
+        font-size: 0.85em;
+    }
+
+    /* Призыв к действию */
+    .cta-section {
+        margin-top: auto;
+    }
+
+    .cta-button {
+        display: block;
+        width: 100%;
+        background: linear-gradient(135deg, #4361ee, #4cc9f0);
+        color: white;
+        padding: 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95em;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .cta-button:hover:not(.disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+    }
+
+    .cta-button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .auth-buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    .auth-btn {
+        flex: 1;
+        padding: 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9em;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .auth-btn.primary {
+        background: linear-gradient(135deg, #4361ee, #4cc9f0);
+        color: white;
+    }
+
+    .auth-btn.secondary {
+        background: rgba(255, 255, 255, 0.05);
+        color: #e0e0e0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .auth-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    /* Адаптивность */
+    @media (max-width: 900px) {
+        .main-content-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .content-column {
+            gap: 20px;
+        }
+        
+        .hero-title {
+            font-size: 1.8em;
+        }
+        
+        .hero-stats {
+            gap: 20px;
+        }
+        
+        .stat-number {
+            font-size: 1.3em;
+        }
+        
+        .tech-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .auth-buttons {
+            flex-direction: column;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .hero-section {
+            padding: 20px;
+        }
+        
+        .hero-stats {
+            gap: 15px;
+        }
+        
+        .feature-card,
+        .game-card,
+        .contact-item {
+            padding: 12px;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Выставить сервер на аукцион{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <div class="page-header">
+        <h1>🏆 Выставить сервер на аукцион</h1>
+        <p>Выбери свой сервер и начни торги</p>
+    </div>
+
+    {% if not user_servers %}
+    <div class="info-card">
+        <h3>📦 У вас нет активных серверов</h3>
+        <p>Чтобы выставить сервер на аукцион, сначала создайте или активируйте его в личном кабинете.</p>
+        <a href="{% url 'servers:server_cases' %}" class="btn-primary" style="text-decoration: none; margin-top: 15px;">
+            🛒 Перейти к кейсам
+        </a>
+    </div>
+    {% else %}
+    
+    <form method="post" class="auction-form">
+        {% csrf_token %}
+        
+        <!-- Выбор сервера -->
+        <div class="form-card">
+            <h3>📌 Выберите сервер</h3>
+            <div class="servers-list">
+                {% for server in user_servers %}
+                <label class="server-option">
+                    <input type="radio" name="user_server_id" value="{{ server.id }}" required 
+                           onchange="updateServerInfo('{{ server.id }}', '{{ server.case.server_type.mod_id }}', '{{ server.plan.plan.slots }}')">
+                    <div class="server-info">
+                        <div class="server-name">{{ server.name }}</div>
+                        <div class="server-meta">
+                            {{ server.case.icon }} {{ server.case.name }} 
+                            • {{ server.plan.plan.get_name_display }} 
+                            • {{ server.plan.plan.slots }} слотов
+                        </div>
+                        <div class="server-balance">
+                            💰 Баланс: {{ server.balance }}₽
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Информация о сервере (автоматически заполняется) -->
+        <div class="form-card">
+            <h3>📊 Информация о сервере</h3>
+            
+            <div class="form-group">
+                <label>Мод игры</label>
+                <input type="text" id="mod-display" class="form-control" readonly style="background: #f5f5f5;">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Количество слотов</label>
+                    <input type="text" id="slots-display" class="form-control" readonly style="background: #f5f5f5;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Параметры аукциона -->
+        <div class="form-card">
+            <h3>🎯 Параметры аукциона</h3>
+            
+            <div class="form-group">
+                <label for="description">Описание сервера</label>
+                <textarea id="description" name="description" rows="4" class="form-control" 
+                          placeholder="Опишите особенности вашего сервера, режимы, квесты..."></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="starting_price">Начальная цена (₽) *</label>
+                    <input type="number" id="starting_price" name="starting_price" required 
+                           min="100" step="10" class="form-control" placeholder="1000">
+                </div>
+
+                <div class="form-group">
+                    <label for="duration_hours">Длительность аукциона *</label>
+                    <select id="duration_hours" name="duration_hours" required class="form-control">
+                        <option value="6">6 часов</option>
+                        <option value="12">12 часов</option>
+                        <option value="24" selected>24 часа (1 день)</option>
+                        <option value="72">3 дня</option>
+                        <option value="168">7 дней</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Информация -->
+        <div class="info-box">
+            <h4>📌 Важная информация</h4>
+            <ul>
+                <li>✓ Сервер автоматически связан с вашим аккаунтом</li>
+                <li>✓ Минимальная начальная цена: 100₽</li>
+                <li>✓ Вы сможете отменить аукцион если на него нет ставок</li>
+                <li>✓ При продаже сервер перейдёт новому владельцу</li>
+            </ul>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">🏆 Выставить на аукцион</button>
+            <a href="{% url 'auction:auction' %}" class="btn-cancel">← Отмена</a>
+        </div>
+    </form>
+
+    {% endif %}
+</div>
+
+<style>
+.page-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 30px;
+    border-bottom: 2px solid rgba(76, 201, 240, 0.2);
+}
+
+.page-header h1 {
+    font-size: 2em;
+    margin: 0 0 10px 0;
+    background: linear-gradient(135deg, #4cc9f0, #a8dadc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.page-header p {
+    color: #888;
+    margin: 0;
+}
+
+.auction-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-card {
+    background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+    border: 1px solid rgba(76, 201, 240, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.form-card h3 {
+    margin: 0 0 20px 0;
+    color: #e0e0e0;
+    font-size: 1.2em;
+}
+
+.servers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.server-option {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgba(76, 201, 240, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.server-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(76, 201, 240, 0.2);
+}
+
+.server-option input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #4cc9f0;
+}
+
+.server-info {
+    flex: 1;
+}
+
+.server-name {
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 5px;
+    font-size: 1.05em;
+}
+
+.server-meta {
+    color: #888;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.server-balance {
+    color: #4cc9f0;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #e0e0e0;
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.95em;
+    transition: all 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #4cc9f0;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.2);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.info-box {
+    background: rgba(76, 201, 240, 0.1);
+    border-left: 4px solid #4cc9f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.info-box h4 {
+    margin: 0 0 12px 0;
+    color: #4cc9f0;
+}
+
+.info-box ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.info-box li {
+    padding: 6px 0;
+    color: #888;
+    font-size: 0.9em;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.btn-submit,
+.btn-cancel {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    text-align: center;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #4361ee, #3a0ca3);
+    color: #fff;
+}
+
+.btn-submit:hover {
+    background: linear-gradient(135deg, #3a0ca3, #3006a0);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+}
+
+.btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+}
+
+.btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.info-card {
+    background: rgba(76, 201, 240, 0.1);
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+}
+
+.info-card h3 {
+    color: #4cc9f0;
+    margin: 0 0 10px 0;
+}
+
+.info-card p {
+    color: #888;
+    margin: 0 0 20px 0;
+}
+
+@media (max-width: 768px) {
+    .page-header h1 {
+        font-size: 1.5em;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+const modNames = {
+    'samp': '🎮 SA-MP',
+    'crmp': '🎮 CR-MP',
+    'minecraft': '🎮 Minecraft',
+    'rust': '🎮 Rust',
+    'csgo': '🎮 CS:GO',
+    'dota2': '🎮 Dota 2',
+    'tf2': '🎮 Team Fortress 2'
+};
+
+function updateServerInfo(serverId, mod, slots) {
+    document.getElementById('mod-display').value = modNames[mod] || mod;
+    document.getElementById('slots-display').value = slots + ' слотов';
+}
+</script>
+{% endblock %}

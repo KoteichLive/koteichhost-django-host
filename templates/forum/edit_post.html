@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Редактирование статьи - Форум{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <!-- Навигация -->
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'forum:forum' %}" class="small">Форум</a> 
+        > <a href="{% url 'forum:category' topic.category.id %}" class="small">{{ topic.category.name }}</a>
+        > <a href="{% url 'forum:topic_posts' topic.id %}" class="small">{{ topic.title|truncatewords:5 }}</a>
+        > <span class="small">Редактирование</span>
+    </div>
+
+    <div class="stat-card">
+        <h2 class="section-title">✏️ Редактирование статьи</h2>
+        
+        <!-- Информация о посте -->
+        <div style="background: rgba(76, 201, 240, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #4cc9f0;">
+            <div class="small">
+                <strong>📂 Тема:</strong> {{ topic.title }}<br>
+                <strong>👤 Оригинал от:</strong> {{ post.author.username }} | {{ post.created_at|date:"d.m.Y H:i" }}<br>
+                {% if post.created_at != post.updated_at %}
+                <strong>🕒 Последнее редактирование:</strong> {{ post.updated_at|date:"d.m.Y H:i" }}
+                {% endif %}
+            </div>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Поле Содержание -->
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; margin-bottom: 10px; color: #e0e0e0; font-weight: 500;">
+                    📄 Содержание сообщения:
+                </label>
+                {{ form.content }}
+                {% if form.content.errors %}
+                <div style="color: #f87171; margin-top: 8px; font-size: 0.9em; padding: 8px; background: rgba(244, 67, 54, 0.1); border-radius: 4px;">
+                    {{ form.content.errors }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Причина редактирования -->
+            <div style="margin-bottom: 30px;">
+                <label style="display: block; margin-bottom: 10px; color: #e0e0e0; font-weight: 500;">
+                    📋 Причина редактирования (необязательно):
+                </label>
+                {{ form.reason }}
+                <div class="small" style="color: #888; margin-top: 8px;">
+                    💡 Укажите причину изменений, чтобы другие участники понимали контекст правок
+                </div>
+            </div>
+
+            <!-- Кнопки -->
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button type="submit" class="btn-primary" style="padding: 12px 24px; font-size: 1em;">
+                    💾 Сохранить изменения
+                </button>
+                <a href="{% url 'forum:topic_posts' topic.id %}" class="btn-primary" style="background: rgba(255,255,255,0.1); padding: 12px 24px;">
+                    ❌ Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Стили для красивых форм (такие же как в create_topic.html) */
+    .beautiful-select,
+    .beautiful-input,
+    .beautiful-textarea {
+        transition: all 0.3s ease;
+        border: 1px solid rgba(76, 201, 240, 0.3) !important;
+        background: rgba(255,255,255,0.05) !important;
+        color: #fff !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
+    }
+    
+    .beautiful-textarea {
+        resize: vertical;
+        min-height: 200px;
+        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        line-height: 1.5;
+    }
+    
+    .beautiful-select:focus,
+    .beautiful-input:focus,
+    .beautiful-textarea:focus {
+        border-color: #4cc9f0 !important;
+        box-shadow: 0 0 0 0.2rem rgba(76, 201, 240, 0.25) !important;
+        background: rgba(255,255,255,0.08) !important;
+    }
+    
+    .beautiful-input::placeholder,
+    .beautiful-textarea::placeholder {
+        color: #888 !important;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}

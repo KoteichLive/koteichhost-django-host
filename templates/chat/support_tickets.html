@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Техподдержка - Тикеты{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <div class="breadcrumb-nav">
+        <a href="{% url 'chat:chat' %}">💬 Чат</a>
+        <span class="separator">/</span>
+        <span>🎫 Техподдержка</span>
+    </div>
+    
+    <div class="tickets-header">
+        <div class="header-top">
+            <h1>Тикеты техподдержки</h1>
+            {% if not is_admin %}
+            <a href="{% url 'chat:create_ticket' %}" class="btn-create-ticket">📝 Создать тикет</a>
+            {% endif %}
+        </div>
+        <div class="status-filters">
+            <a href="?status=new" class="filter-btn {% if status == 'new' %}active{% endif %}">
+                🆕 Новые {% if is_admin %}({{ unread_count }}){% endif %}
+            </a>
+            <a href="?status=in_progress" class="filter-btn {% if status == 'in_progress' %}active{% endif %}">
+                🔄 В процессе
+            </a>
+            <a href="?status=waiting" class="filter-btn {% if status == 'waiting' %}active{% endif %}">
+                ⏳ Ожидание
+            </a>
+            <a href="?status=resolved" class="filter-btn {% if status == 'resolved' %}active{% endif %}">
+                ✅ Решены
+            </a>
+            <a href="?status=all" class="filter-btn {% if status == 'all' %}active{% endif %}">
+                📋 Все
+            </a>
+        </div>
+    </div>
+    
+    {% if tickets %}
+        <div class="tickets-list">
+            {% for ticket in tickets %}
+            <div class="ticket-card status-{{ ticket.status }}">
+                <div class="ticket-header">
+                    <div class="ticket-info">
+                        <h3>
+                            <a href="{% url 'chat:ticket_detail' ticket.id %}">
+                                #{{ ticket.id }} - {{ ticket.subject|truncatewords:8 }}
+                            </a>
+                        </h3>
+                        <div class="ticket-meta">
+                            <span class="meta-user">👤 {{ ticket.user.username }}</span>
+                            <span class="meta-status status-badge status-{{ ticket.status }}">
+                                {{ ticket.get_status_display }}
+                            </span>
+                            <span class="meta-priority priority-{{ ticket.priority }}">
+                                {{ ticket.get_priority_display }}
+                            </span>
+                            <span class="meta-date">📅 {{ ticket.created_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                    </div>
+                    {% if not ticket.is_read %}
+                    <span class="unread-badge">Новое</span>
+                    {% endif %}
+                </div>
+                
+                <div class="ticket-content">
+                    <p>{{ ticket.message|truncatewords:30 }}</p>
+                </div>
+                
+                <div class="ticket-footer">
+                    <div class="ticket-stats">
+                        <span class="stat">💬 Ответов: {{ ticket.replies.count }}</span>
+                        {% if ticket.assigned_to %}
+                        <span class="stat">👨‍💼 Назначено: {{ ticket.assigned_to.username }}</span>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'chat:ticket_detail' ticket.id %}" class="btn-view">Открыть</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-tickets-card">
+            <div class="no-tickets-icon">✨</div>
+            <h2>Нет тикетов</h2>
+            <p>{% if status != 'all' %}В этой категории нет тикетов{% else %}Все тикеты решены!{% endif %}</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .tickets-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid rgba(76, 201, 240, 0.2);
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .tickets-header h1 {
+        margin: 0;
+        font-size: 2em;
+        color: #e0e0e0;
+    }
+
+    .btn-create-ticket {
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #4361ee, #4cc9f0);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.95em;
+        transition: all 0.3s;
+    }
+
+    .btn-create-ticket:hover {
+        background: linear-gradient(135deg, #3a0ca3, #4361ee);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+    }
+
+    .status-filters {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: rgba(76, 201, 240, 0.1);
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 6px;
+        color: #4cc9f0;
+        text-decoration: none;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+        background: rgba(76, 201, 240, 0.2);
+        border-color: rgba(76, 201, 240, 0.4);
+    }
+
+    .tickets-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .ticket-card {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .ticket-card:hover {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.12), rgba(168, 218, 220, 0.06));
+        border-color: rgba(76, 201, 240, 0.3);
+        box-shadow: 0 8px 24px rgba(76, 201, 240, 0.15);
+    }
+
+    .ticket-card.status-new {
+        border-left: 4px solid #4cc9f0;
+    }
+
+    .ticket-card.status-in_progress {
+        border-left: 4px solid #ffc107;
+    }
+
+    .ticket-card.status-waiting {
+        border-left: 4px solid #ff9800;
+    }
+
+    .ticket-card.status-resolved {
+        border-left: 4px solid #4caf50;
+    }
+
+    .ticket-card.status-closed {
+        border-left: 4px solid #999;
+    }
+
+    .ticket-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+    }
+
+    .ticket-info h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.2em;
+    }
+
+    .ticket-info h3 a {
+        color: #a8dadc;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .ticket-info h3 a:hover {
+        color: #4cc9f0;
+    }
+
+    .ticket-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        font-size: 0.9em;
+    }
+
+    .meta-user {
+        color: #888;
+    }
+
+    .meta-date {
+        color: #888;
+    }
+
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.85em;
+    }
+
+    .status-badge.status-new {
+        background: rgba(76, 201, 240, 0.2);
+        color: #4cc9f0;
+    }
+
+    .status-badge.status-in_progress {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+    }
+
+    .status-badge.status-waiting {
+        background: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+    }
+
+    .status-badge.status-resolved {
+        background: rgba(76, 200, 100, 0.2);
+        color: #4cc864;
+    }
+
+    .status-badge.status-closed {
+        background: rgba(150, 150, 150, 0.2);
+        color: #aaa;
+    }
+
+    .priority-low {
+        color: #4caf50;
+    }
+
+    .priority-medium {
+        color: #ff9800;
+    }
+
+    .priority-high {
+        color: #f44336;
+    }
+
+    .unread-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.3), rgba(76, 201, 240, 0.2));
+        color: #4cc9f0;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+        border: 1px solid rgba(76, 201, 240, 0.3);
+    }
+
+    .ticket-content {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(76, 201, 240, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+
+    .ticket-content p {
+        margin: 0;
+        color: #e0e0e0;
+        line-height: 1.5;
+    }
+
+    .ticket-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .ticket-stats {
+        display: flex;
+        gap: 20px;
+        font-size: 0.9em;
+        color: #888;
+    }
+
+    .stat {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-view {
+        padding: 8px 16px;
+        background: rgba(76, 201, 240, 0.15);
+        border: 1px solid rgba(76, 201, 240, 0.3);
+        border-radius: 6px;
+        color: #4cc9f0;
+        text-decoration: none;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+
+    .btn-view:hover {
+        background: rgba(76, 201, 240, 0.25);
+        border-color: rgba(76, 201, 240, 0.5);
+    }
+
+    .no-tickets-card {
+        text-align: center;
+        padding: 60px 20px;
+        background: rgba(76, 201, 240, 0.08);
+        border: 2px dashed rgba(76, 201, 240, 0.2);
+        border-radius: 12px;
+    }
+
+    .no-tickets-icon {
+        font-size: 3em;
+        margin-bottom: 15px;
+    }
+
+    .no-tickets-card h2 {
+        margin: 0 0 10px 0;
+        color: #e0e0e0;
+    }
+
+    .no-tickets-card p {
+        margin: 0;
+        color: #888;
+    }
+
+    @media (max-width: 768px) {
+        .status-filters {
+            justify-content: center;
+        }
+
+        .ticket-header {
+            flex-direction: column;
+        }
+
+        .ticket-footer {
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .ticket-stats {
+            flex-direction: column;
+            gap: 8px;
+        }
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Аукцион - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 class="section-title">🏷️ Аукцион серверов</h2>
+        <a href="{% url 'auction:create_auction' %}" class="btn-primary">+ Выставить сервер</a>
+    </div>
+    
+    <div style="margin-bottom: 30px;">
+        <h3>📋 Активные аукционы</h3>
+        {% if active_auctions %}
+            <div class="stats-grid">
+                {% for auction in active_auctions %}
+                    <div class="stat-card">
+                        <h4>{{ auction.name }}</h4>
+                        <p class="small">
+                            <strong>{{ auction.mod }}</strong> | 
+                            Слоты: {{ auction.slots }}
+                        </p>
+                        <p class="small">Владелец: <strong>{{ auction.owner.username }}</strong></p>
+                        
+                        <div style="margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                            <div>Начальная цена: <strong>{{ auction.starting_price }}₽</strong></div>
+                            <div style="font-size: 1.2em; color: #27ae60; font-weight: bold; margin-top: 5px;">
+                                Текущая цена: {{ auction.current_price }}₽
+                            </div>
+                        </div>
+                        
+                        <div class="small" style="color: #e74c3c;">
+                            ⏱️ Осталось: 
+                            {% if auction.is_active %}
+                                {{ auction.end_date|timesince }} 
+                            {% else %}
+                                Аукцион завершён
+                            {% endif %}
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <a href="{% url 'auction:auction_detail' auction.id %}" class="btn-primary" style="display: block; text-align: center;">
+                                Просмотреть →
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="text-align: center; color: #7f8c8d;">Активных аукционов не найдено</p>
+        {% endif %}
+    </div>
+    
+    <div>
+        <h3>✅ Последние продажи</h3>
+        {% if sold_auctions %}
+            <div class="stats-grid">
+                {% for auction in sold_auctions %}
+                    <div class="stat-card" style="opacity: 0.8;">
+                        <h4>{{ auction.name }}</h4>
+                        <p class="small">{{ auction.mod }} | Слоты: {{ auction.slots }}</p>
+                        <p class="small">Продавец: <strong>{{ auction.owner.username }}</strong></p>
+                        <p class="small">Покупатель: <strong>{{ auction.buyer.username }}</strong></p>
+                        <div style="color: #27ae60; font-weight: bold; margin: 10px 0;">
+                            Продана за: {{ auction.current_price }}₽
+                        </div>
+                        <div class="small">{{ auction.sold_at|date:"d.m.Y H:i" }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="text-align: center; color: #7f8c8d;">Нет завершённых аукционов</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .btn-primary {
+        background-color: #3498db;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2980b9;
+    }
+</style>
+{% endblock %}

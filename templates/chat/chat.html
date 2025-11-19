@@ -1,0 +1,903 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Список чатов -->
+        <div class="col-md-3 border-end">
+            <div class="d-flex mb-3">
+                <button class="btn btn-primary me-2" onclick="switchChatType('ai')">AI Чат</button>
+                <button class="btn btn-outline-primary" onclick="switchChatType('user')">Личные сообщения</button>
+            </div>
+            
+            <!-- Поиск пользователей -->
+            <div class="mb-3" id="userSearchSection" style="display: none;">
+                <input type="text" id="userSearch" class="form-control" placeholder="Найти пользователя...">
+                <div id="searchResults" class="mt-2"></div>
+            </div>
+            
+            <!-- Список чатов -->
+            <div id="chatList">
+                <div id="aiChats">
+                    <!-- AI чат всегда доступен -->
+                    <div class="chat-item active" onclick="selectAIChat()">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                AI
+                            </div>
+                            <div>
+                                <strong>koteich AI</strong>
+                                <div class="text-muted small">Задайте любой вопрос</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Чат администрации -->
+                    
+                    
+                    <!-- Техподдержка для админов -->
+                    {% if request.user.is_staff and unread_tickets_count > 0 %}
+                    <a href="{% url 'chat:tickets' %}" style="text-decoration: none;">
+                        <div class="chat-item">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar bg-danger text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    🎫
+                                </div>
+                                <div>
+                                    <strong>Техподдержка</strong>
+                                    <div class="text-muted small">Система тикетов</div>
+                                </div>
+                                <span class="badge bg-danger ms-auto">{{ unread_tickets_count }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% elif request.user.is_staff %}
+                    <a href="{% url 'chat:tickets' %}" style="text-decoration: none;">
+                        <div class="chat-item">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar bg-secondary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    🎫
+                                </div>
+                                <div>
+                                    <strong>Техподдержка</strong>
+                                    <div class="text-muted small">Система тикетов</div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <div id="userChats" style="display: none;">
+                    {% for partner in chat_partners %}
+                    <div class="chat-item" onclick="selectUserChat('{{ partner.username }}', this)">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar bg-secondary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                {{ partner.username|first|upper }}
+                            </div>
+                            <div>
+                                <strong>{{ partner.username }}</strong>
+                                <div class="text-muted small">{{ partner.last_message|truncatewords:5 }}</div>
+                            </div>
+                            {% if partner.unread_count > 0 %}
+                            <span class="badge bg-danger ms-auto">{{ partner.unread_count }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted text-center">Нет личных сообщений</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Окно чата -->
+        <div class="col-md-9">
+            <div class="chat-container">
+                <div class="chat-header border-bottom p-3">
+                    <h5 id="chatTitle">AI Ассистент</h5>
+                    <div id="chatControls" style="display: none;">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearChat()">Очистить историю</button>
+                    </div>
+                    {% if admin_unread_count and admin_unread_count > 0 %}
+                    <div class="mt-2">
+                        <span class="badge bg-warning text-dark">Есть непрочитанные сообщения администрации ({{ admin_unread_count }})</span>
+                        <button class="btn btn-sm btn-link" onclick="markAdminRead()">Отметить как прочитанные</button>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Сообщения будут загружаться здесь -->
+                    <div class="text-center text-muted mt-5">
+                        Загрузка сообщений...
+                    </div>
+                </div>
+                
+                <div class="chat-input p-3 border-top">
+                    <!-- CSRF Token для AJAX запросов -->
+                    {% csrf_token %}
+                    
+                    <div id="aiInput">
+                        <div class="input-group">
+                            <input type="text" id="messageInput" class="form-control" placeholder="Поехали!" onkeypress="handleKeyPress(event)">
+                            <button class="btn btn-primary" onclick="sendMessage()">Отправить</button>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">Текущая модель: {{ default_model }}</small>
+                        </div>
+                    </div>
+                    
+                    <div id="userInput" style="display: none;">
+                        {% comment %} Показываем информацию о запрете писать, если он есть {% endcomment %}
+                        {% if chat_restriction and chat_restriction.restricted_write %}
+                        <div class="alert alert-warning">
+                            <strong>Доступ к отправке сообщений ограничен.</strong>
+                            {% if chat_restriction.purchasable and chat_restriction.price %}
+                                <div>Вы можете выкупить право писать за <strong>{{ chat_restriction.price }} ₽</strong>.</div>
+                                <div class="mt-2"><button class="btn btn-sm btn-success" onclick="purchaseWrite()">Выкупить</button></div>
+                            {% else %}
+                                <div>Обратитесь в поддержку для снятия ограничения.</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="mb-2">
+                            <small class="text-muted">Отправка сообщения пользователю: <span id="currentRecipient"></span></small>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="userMessageInput" class="form-control" placeholder="Введите сообщение для пользователя..." onkeypress="handleUserKeyPress(event)">
+                            <button class="btn btn-primary" id="userSendBtn" onclick="sendUserMessage()">Отправить</button>
+                        </div>
+                        {% if request.user.is_staff %}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-warning" onclick="openAdminMessagePrompt()">Отправить сообщение как администрация</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chat-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+.chat-item:hover {
+    background-color: #f8f9fa;
+}
+.chat-item.active {
+    background-color: #e3f2fd;
+}
+.chat-messages {
+    height: 500px;
+    overflow-y: auto;
+    padding: 20px;
+}
+.message {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 15px;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+.message-own {
+    background-color: #007bff;
+    color: white;
+    margin-left: auto;
+}
+.message-other {
+    background-color: #f1f1f1;
+    color: #333;
+}
+.message-ai {
+    background-color: #e8f5e8;
+    color: #333;
+    border-left: 4px solid #28a745;
+}
+.avatar {
+    font-weight: bold;
+}
+.message-time {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-top: 5px;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+.message-ai .spinner-border {
+    color: #28a745;
+}
+</style>
+
+<script>
+// Глобальные переменные
+let currentChatType = 'ai';
+let currentRecipient = '';
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+let isWaitingForAI = false;
+let lastMessageId = 0;
+let messagePollInterval = null;
+
+// === ФУНКЦИИ ДЛЯ ЛИЧНЫХ СООБЩЕНИЙ С АВТООБНОВЛЕНИЕМ ===
+function startMessagePolling() {
+    // Останавливаем предыдущий интервал
+    stopMessagePolling();
+    
+    // Запускаем проверку новых сообщений каждую секунду
+    messagePollInterval = setInterval(() => {
+        if (currentChatType === 'user' && currentRecipient && lastMessageId > 0) {
+            checkForNewMessages();
+        }
+    }, 1000);
+}
+
+function stopMessagePolling() {
+    if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
+    }
+}
+
+function checkForNewMessages() {
+    if (!currentRecipient || lastMessageId === 0) return;
+    
+    fetch(`{% url 'chat:check_new_messages' %}?recipient=${encodeURIComponent(currentRecipient)}&last_id=${lastMessageId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.has_new) {
+                console.log('Обнаружены новые сообщения, загружаем...');
+                // Есть новые сообщения, загружаем историю
+                loadChatHistory('user', currentRecipient, lastMessageId);
+            }
+        })
+        .catch(error => console.error('Error checking new messages:', error));
+}
+
+// === ОБНОВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ИСТОРИИ ===
+function loadChatHistory(type, recipient = '', sinceId = 0) {
+    let url = `{% url 'chat:get_history' %}?type=${type}`;
+    if (recipient) {
+        url += `&recipient=${encodeURIComponent(recipient)}`;
+    }
+    if (sinceId > 0) {
+        url += `&last_id=${sinceId}`;
+    }
+    
+    console.log('Загрузка истории:', url);
+    
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка загрузки истории');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            console.log('Получены данные:', data.history.length, 'сообщений');
+            
+            // Обновляем lastMessageId
+            if (data.last_id && data.last_id > lastMessageId) {
+                lastMessageId = data.last_id;
+                console.log('Обновлен lastMessageId:', lastMessageId);
+            }
+            
+            if (sinceId > 0 && data.history.length > 0) {
+                // Добавляем только новые сообщения
+                appendNewMessages(data.history);
+            } else {
+                // Показываем всю историю
+                displayMessages(data.history);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading chat history:', error);
+        });
+}
+
+function appendNewMessages(newMessages) {
+    const container = document.getElementById('chatMessages');
+    console.log('Добавление новых сообщений:', newMessages.length);
+    
+    newMessages.forEach(msg => {
+        const messageDiv = document.createElement('div');
+        const time = new Date(msg.timestamp).toLocaleTimeString();
+        
+        if (msg.type === 'user' || msg.type === 'user_admin') {
+            if (msg.is_own) {
+                messageDiv.className = 'message message-own';
+                messageDiv.innerHTML = `
+                    <div><strong>Вы:</strong> ${msg.message}</div>
+                    <div class="message-time">${time}</div>
+                `;
+            } else {
+                messageDiv.className = 'message message-other';
+                messageDiv.innerHTML = `
+                    <div><strong>${msg.sender}:</strong> ${msg.message}</div>
+                    <div class="message-time">${time}</div>
+                `;
+            }
+
+            container.appendChild(messageDiv);
+        } else if (msg.type === 'admin') {
+            messageDiv.className = 'message message-other';
+            messageDiv.innerHTML = `
+                <div><strong>${msg.sender}:</strong> ${msg.message}</div>
+                <div class="message-time">${time}</div>
+            `;
+            container.appendChild(messageDiv);
+        }
+    });
+    
+    // Прокрутка вниз и пометка как прочитанные
+    container.scrollTop = container.scrollHeight;
+    if (newMessages.some(msg => msg.type === 'user' && !msg.is_own)) {
+        markMessagesAsRead(currentRecipient);
+    }
+}
+
+function displayMessages(messages) {
+    const container = document.getElementById('chatMessages');
+    
+    if (messages.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted mt-5">
+                <p>Нет сообщений</p>
+                <small>Начните общение первым!</small>
+            </div>
+        `;
+        lastMessageId = 0;
+        return;
+    }
+    
+    container.innerHTML = '';
+    lastMessageId = 0;
+    
+    messages.forEach(msg => {
+        const messageDiv = document.createElement('div');
+        const time = new Date(msg.timestamp).toLocaleTimeString();
+        
+    if (msg.type === 'ai') {
+            if (msg.sender === 'user') {
+                messageDiv.className = 'message message-own';
+                messageDiv.innerHTML = `
+                    <div>${msg.message}</div>
+                    <div class="message-time">${time}</div>
+                `;
+            } else {
+                messageDiv.className = 'message message-ai';
+                
+                if (msg.is_ready === false) {
+                    messageDiv.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Загрузка...</span>
+                            </div>
+                            <strong>AI:</strong> Обрабатываю запрос...
+                        </div>
+                        <div class="message-time">${time}</div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div><strong>AI:</strong> ${msg.message}</div>
+                        <div class="message-time">${time}</div>
+                    `;
+                }
+            }
+        } else if (msg.type === 'admin') {
+            messageDiv.className = 'message message-other';
+            messageDiv.innerHTML = `
+                <div><strong>${msg.sender}:</strong> ${msg.message}</div>
+                <div class="message-time">${time}</div>
+            `;
+        } else if (msg.type === 'user_admin') {
+            // user's message to admin
+            if (msg.is_own) {
+                messageDiv.className = 'message message-own';
+                messageDiv.innerHTML = `
+                    <div><strong>Вы:</strong> ${msg.message}</div>
+                    <div class="message-time">${time}</div>
+                `;
+            } else {
+                messageDiv.className = 'message message-other';
+                messageDiv.innerHTML = `
+                    <div><strong>${msg.sender}:</strong> ${msg.message}</div>
+                    <div class="message-time">${time}</div>
+                `;
+            }
+        } else {
+            if (msg.is_own) {
+                messageDiv.className = 'message message-own';
+                messageDiv.innerHTML = `
+                    <div><strong>Вы:</strong> ${msg.message}</div>
+                    <div class="message-time">${time}</div>
+                `;
+            } else {
+                messageDiv.className = 'message message-other';
+                messageDiv.innerHTML = `
+                    <div><strong>${msg.sender}:</strong> ${msg.message}</div>
+                    <div class="message-time">${time}</div>
+                `;
+            }
+        }
+        
+        container.appendChild(messageDiv);
+        
+        // Обновляем lastMessageId
+        if (msg.id > lastMessageId) {
+            lastMessageId = msg.id;
+        }
+    });
+    
+    console.log('Last message ID установлен:', lastMessageId);
+    
+    // Прокрутка вниз
+    container.scrollTop = container.scrollHeight;
+}
+
+// === ФУНКЦИИ ЧАТА ===
+function switchChatType(type) {
+    currentChatType = type;
+    
+    // Останавливаем опрос сообщений
+    stopMessagePolling();
+    
+    // Сбрасываем активные элементы
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    if (type === 'ai') {
+        document.getElementById('userSearchSection').style.display = 'none';
+        document.getElementById('aiChats').style.display = 'block';
+        document.getElementById('userChats').style.display = 'none';
+        document.getElementById('aiInput').style.display = 'block';
+        document.getElementById('userInput').style.display = 'none';
+        document.getElementById('chatControls').style.display = 'none';
+        document.getElementById('chatTitle').textContent = 'AI Ассистент';
+        
+        // Активируем AI чат
+        document.querySelector('#aiChats .chat-item').classList.add('active');
+        selectAIChat();
+    } else {
+        document.getElementById('userSearchSection').style.display = 'block';
+        document.getElementById('aiChats').style.display = 'none';
+        document.getElementById('userChats').style.display = 'block';
+        document.getElementById('aiInput').style.display = 'none';
+        document.getElementById('userInput').style.display = 'block';
+        document.getElementById('chatControls').style.display = 'block';
+        document.getElementById('chatTitle').textContent = 'Выберите собеседника';
+        
+        loadUsersList();
+    }
+}
+
+function selectAIChat() {
+    currentRecipient = '';
+    currentChatType = 'ai';
+    lastMessageId = 0;
+    loadChatHistory('ai');
+}
+
+    function selectUserChat(username, el) {
+    currentRecipient = username;
+    currentChatType = 'user';
+    lastMessageId = 0; // Сбрасываем при смене чата
+    document.getElementById('currentRecipient').textContent = username;
+    document.getElementById('chatTitle').textContent = `Чат с ${username}`;
+
+    // Активируем выбранный чат
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // Если передан элемент, помечаем его активным, иначе ищем элемент по имени
+    try {
+        if (el) {
+            if (el.currentTarget) el.currentTarget.classList.add('active');
+            else el.classList.add('active');
+        } else {
+            const items = document.querySelectorAll('.chat-item');
+            for (const item of items) {
+                if (item.textContent && item.textContent.includes(username)) {
+                    item.classList.add('active');
+                    break;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Не удалось пометить элемент активным:', e);
+    }
+
+    // Загружаем историю и запускаем опрос
+    loadChatHistory('user', username);
+    markMessagesAsRead(username);
+    startMessagePolling();
+}
+
+function selectAdminChat() {
+    currentRecipient = '';
+    currentChatType = 'admin';
+    lastMessageId = 0;
+    document.getElementById('chatTitle').textContent = 'Чат с Администрацией';
+    // Делаем режим чтения: скрываем поле отправки как для обычных пользователей
+    document.getElementById('aiInput').style.display = 'none';
+    document.getElementById('userInput').style.display = 'block';
+    // Если есть уведомление о запрете писать, оно покажется контролом
+    // Загружаем историю администрации
+    loadChatHistory('admin');
+}
+
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    
+    if (!message) {
+        alert('Введите сообщение');
+        return;
+    }
+    
+    if (isWaitingForAI) {
+        alert('Дождитесь ответа от AI');
+        return;
+    }
+    
+    // Блокируем кнопку и поле ввода
+    const button = input.nextElementSibling;
+    button.disabled = true;
+    input.disabled = true;
+    button.textContent = 'Отправка...';
+    isWaitingForAI = true;
+    
+    // Очищаем поле ввода
+    input.value = '';
+    
+    // Сразу добавляем сообщение пользователя в чат
+    addUserMessageToChat(message);
+    
+    // Добавляем индикатор загрузки для AI
+    addAILoadingIndicator();
+    
+    // Отправляем запрос
+    fetch("{% url 'chat:send_message' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            message: message,
+            type: 'ai'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Запускаем проверку готовности ответа
+            checkAIResponseReady(data.message_id);
+        } else {
+            // Убираем индикатор загрузки и показываем ошибку
+            removeAILoadingIndicator();
+            addErrorMessageToChat(data.error || 'Неизвестная ошибка');
+            isWaitingForAI = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Убираем индикатор загрузки и показываем ошибку
+        removeAILoadingIndicator();
+        addErrorMessageToChat('Ошибка сети: ' + error.message);
+        isWaitingForAI = false;
+    })
+    .finally(() => {
+        // Разблокируем кнопку и поле ввода (но оставляем isWaitingForAI=true пока AI обрабатывает)
+        button.disabled = false;
+        input.disabled = false;
+        button.textContent = 'Отправить';
+        
+        // Фокус на поле ввода
+        input.focus();
+    });
+}
+
+function checkAIResponseReady(messageId) {
+    let attempts = 0;
+    const maxAttempts = 30;
+    
+    function check() {
+        attempts++;
+        
+        if (attempts > maxAttempts) {
+            removeAILoadingIndicator();
+            addErrorMessageToChat('AI не ответил в течение 60 секунд');
+            isWaitingForAI = false;
+            return;
+        }
+        
+        loadChatHistory('ai');
+        
+        // Проверяем, есть ли готовый ответ в истории
+        setTimeout(() => {
+            const container = document.getElementById('chatMessages');
+            const aiMessages = container.querySelectorAll('.message-ai');
+            const lastAIMessage = aiMessages[aiMessages.length - 1];
+            
+            if (lastAIMessage && !lastAIMessage.innerHTML.includes('spinner-border')) {
+                // Ответ готов, убираем индикатор
+                removeAILoadingIndicator();
+                isWaitingForAI = false;
+            } else {
+                // Продолжаем проверять
+                check();
+            }
+        }, 2000);
+    }
+    
+    check();
+}
+
+function sendUserMessage() {
+    const input = document.getElementById('userMessageInput');
+    const message = input.value.trim();
+    
+    if (!message) {
+        alert('Введите сообщение');
+        return;
+    }
+    
+    if (!currentRecipient && currentChatType !== 'admin') {
+        alert('Выберите собеседника');
+        return;
+    }
+    
+    // Блокируем кнопку
+    const button = input.nextElementSibling;
+    button.disabled = true;
+    button.textContent = 'Отправка...';
+    
+    const recipientToSend = (currentChatType === 'admin') ? '__admin__' : currentRecipient;
+
+    fetch("{% url 'chat:send_message' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            message: message,
+            type: 'user',
+            recipient: recipientToSend
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            input.value = '';
+            // Загружаем историю с учетом нового сообщения
+            loadChatHistory('user', currentRecipient, lastMessageId);
+        } else {
+            alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        }
+    })
+    .catch(error => {
+        alert('Ошибка сети: ' + error.message);
+    })
+    .finally(() => {
+        // Разблокируем кнопку
+        button.disabled = false;
+        button.textContent = 'Отправить';
+    });
+}
+
+// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+function addUserMessageToChat(message) {
+    const container = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message message-own';
+    messageDiv.innerHTML = `
+        <div><strong>Вы:</strong> ${message}</div>
+        <div class="message-time">${new Date().toLocaleTimeString()}</div>
+    `;
+    container.appendChild(messageDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+function addAILoadingIndicator() {
+    const container = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message message-ai';
+    messageDiv.id = 'ai-loading-indicator';
+    messageDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <div class="spinner-border spinner-border-sm me-2" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <strong>AI:</strong> Обрабатываю запрос...
+        </div>
+        <div class="message-time">${new Date().toLocaleTimeString()}</div>
+    `;
+    container.appendChild(messageDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+function removeAILoadingIndicator() {
+    const loadingIndicator = document.getElementById('ai-loading-indicator');
+    if (loadingIndicator) {
+        loadingIndicator.remove();
+    }
+}
+
+function addErrorMessageToChat(error) {
+    const container = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'alert alert-danger';
+    messageDiv.textContent = `Ошибка: ${error}`;
+    container.appendChild(messageDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+function loadUsersList() {
+    fetch("{% url 'chat:get_users' %}")
+        .then(response => response.json())
+        .then(data => {
+            displaySearchResults(data.users);
+        })
+        .catch(error => {
+            console.error('Error loading users:', error);
+        });
+}
+
+function displaySearchResults(users) {
+    const container = document.getElementById('searchResults');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<div class="text-muted text-center">Пользователи не найдены</div>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+        users.forEach(user => {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'chat-item';
+        userDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="avatar bg-secondary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                    ${user.username[0].toUpperCase()}
+                </div>
+                <div>
+                    <strong>${user.username}</strong>
+                </div>
+                <button class="btn btn-sm btn-outline-primary ms-auto" onclick="selectUserChat('${user.username}', this)">
+                    Написать
+                </button>
+            </div>
+        `;
+        container.appendChild(userDiv);
+    });
+}
+
+function markMessagesAsRead(recipient) {
+    fetch("{% url 'chat:mark_read' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            recipient: recipient
+        })
+    }).catch(error => console.error('Error marking as read:', error));
+}
+
+function clearChat() {
+    if (!confirm('Вы уверены, что хотите очистить историю чата?')) {
+        return;
+    }
+    
+    let url = `{% url 'chat:clear_history' %}?type=${currentChatType}`;
+    if (currentRecipient) {
+        url += `&recipient=${encodeURIComponent(currentRecipient)}`;
+    }
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadChatHistory(currentChatType, currentRecipient);
+            } else {
+                alert('Ошибка при очистке истории');
+            }
+        })
+        .catch(error => {
+            alert('Ошибка: ' + error.message);
+        });
+}
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter' && !isWaitingForAI) {
+        sendMessage();
+    }
+}
+
+function handleUserKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendUserMessage();
+    }
+}
+
+// === ADMIN / PURCHASE HELPERS ===
+function markAdminRead() {
+    fetch("{% url 'chat:mark_admin_read' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({})
+    }).then(() => {
+        // Скрываем бейдж
+        const badges = document.querySelectorAll('.badge.bg-warning');
+        badges.forEach(b => b.style.display = 'none');
+    }).catch(err => console.error(err));
+}
+
+function openAdminMessagePrompt() {
+    const recip = currentRecipient || prompt('Укажите логин получателя:');
+    if (!recip) return;
+    const content = prompt('Введите текст сообщения от администрации:');
+    if (!content) return;
+    // Отправляем админское сообщение
+    fetch("{% url 'chat:admin_send' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ recipient: recip, content: content })
+    }).then(response => response.json()).then(data => {
+        if (data.success) {
+            alert('Сообщение отправлено');
+        } else {
+            alert('Ошибка: ' + (data.error || 'Не удалось отправить'));
+        }
+    }).catch(err => alert('Ошибка сети: ' + err.message));
+}
+
+function purchaseWrite() {
+    if (!confirm('Вы действительно хотите выкупить право писать?')) return;
+    fetch("{% url 'chat:purchase_write' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({})
+    }).then(response => response.json()).then(data => {
+        if (data.success) {
+            alert('Выкуп успешно оформлен. Теперь вы можете писать.');
+            // Перезагрузка страницы, чтобы обновить состояние
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.error || 'Не удалось выкупить'));
+        }
+    }).catch(err => alert('Ошибка сети: ' + err.message));
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    selectAIChat();
+    document.getElementById('messageInput').focus();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ topic.title }} - Форум{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <!-- Навигация -->
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'forum:forum' %}" class="small">Форум</a> 
+        > <a href="{% url 'forum:category' topic.category.id %}" class="small">{{ topic.category.name }}</a>
+        > <span class="small">{{ topic.title|truncatewords:5 }}</span>
+    </div>
+    
+    <!-- Заголовок темы -->
+    <div class="stat-card">
+        <h2 style="margin: 0 0 10px 0;">
+            {% if topic.is_pinned %}📌{% endif %}
+            {{ topic.title }}
+            {% if topic.is_closed %}🔒{% endif %}
+        </h2>
+        <div class="small" style="margin-bottom: 15px;">
+            👤 {{ topic.author.username }} | 
+            📅 {{ topic.created_at|date:"d.m.Y H:i" }} | 
+            👁️ {{ topic.views }} | 
+            💬 {{ posts.paginator.count }}
+        </div>
+        
+        <!-- Первое сообщение (тема) -->
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            {{ topic.content|linebreaks }}
+        </div>
+        
+        {% if user.is_authenticated and user == topic.author %}
+        <div class="small">
+            <a href="#" class="btn-primary" style="padding: 5px 10px; font-size: 0.8em;">✏️ Редактировать тему</a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Сообщения -->
+    {% for post in posts %}
+    <div class="stat-card" id="post-{{ post.id }}" style="margin-top: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div>
+                <strong>{{ post.author.username }}</strong>
+                <span class="small">#{{ forloop.counter }}</span>
+            </div>
+            <div class="small">
+                📅 {{ post.created_at|date:"d.m.Y H:i" }}
+                {% if post.created_at != post.updated_at %}
+                <span title="Отредактировано: {{ post.updated_at|date:'d.m.Y H:i' }}">(ред.)</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            {{ post.content|linebreaks }}
+        </div>
+        
+        {% if user.is_authenticated %}
+        <div class="small" style="display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+            {% if user == post.author or user.is_staff %}
+            <a href="{% url 'forum:edit_post' post.id %}" class="btn-primary" style="padding: 3px 8px; font-size: 0.8em;">✏️ Редактировать</a>
+            {% endif %}
+            {% if post.edits.exists %}
+            <a href="{% url 'forum:post_history' post.id %}" class="small" style="color: #4cc9f0;">📋 История правок</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    
+    <!-- Пагинация -->
+    {% if posts.has_other_pages %}
+    <div class="stat-card" style="text-align: center; margin-top: 20px;">
+        <div style="display: inline-flex; gap: 5px;">
+            {% if posts.has_previous %}
+            <a href="?page={{ posts.previous_page_number }}" class="btn-primary" style="padding: 5px 10px;">‹ Назад</a>
+            {% endif %}
+            
+            <span class="small" style="padding: 5px 10px;">
+                Страница {{ posts.number }} из {{ posts.paginator.num_pages }}
+            </span>
+            
+            {% if posts.has_next %}
+            <a href="?page={{ posts.next_page_number }}" class="btn-primary" style="padding: 5px 10px;">Вперед ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Форма ответа -->
+    {% if user.is_authenticated %}
+    {% if not topic.is_closed or user.is_staff %}
+    <div class="stat-card" style="margin-top: 20px;">
+        <h3>💬 Ответить в теме</h3>
+        <form method="post" action="{% url 'forum:add_post' topic.id %}">
+            {% csrf_token %}
+            {{ post_form.content }}
+            <button type="submit" class="btn-primary" style="margin-top: 10px;">📤 Отправить ответ</button>
+        </form>
+    </div>
+    {% else %}
+    <div class="stat-card" style="background: rgba(244, 67, 54, 0.1); margin-top: 20px;">
+        <h4>🔒 Тема закрыта</h4>
+        <p>Эта тема закрыта для обсуждения. Вы не можете добавлять новые сообщения.</p>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="stat-card" style="background: rgba(76, 201, 240, 0.1); margin-top: 20px;">
+        <h4>🔐 Требуется авторизация</h4>
+        <p>Для участия в обсуждении необходимо 
+           <a href="{% url 'accounts:login' %}?next={{ request.path }}" style="color: #4cc9f0;">войти</a> 
+           или <a href="{% url 'accounts:register' %}" style="color: #4cc9f0;">зарегистрироваться</a>.
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

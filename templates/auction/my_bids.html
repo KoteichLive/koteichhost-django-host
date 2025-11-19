@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Мои ставки в аукционах{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <h2>📊 Мои ставки</h2>
+    
+    <div style="margin-bottom: 20px;">
+        <div class="stat-card">
+            <h4>Всего ставок</h4>
+            <div style="font-size: 2em; font-weight: bold; color: #3498db;">{{ total_bids }}</div>
+        </div>
+    </div>
+    
+    {% if auctions_with_bids %}
+        <div class="stats-grid">
+            {% for item in auctions_with_bids %}
+                <div class="stat-card">
+                    <h4>{{ item.auction.name }}</h4>
+                    <p class="small">{{ item.auction.mod }} | Слоты: {{ item.auction.slots }}</p>
+                    
+                    <div style="margin: 15px 0; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                        <div class="small">Ваша ставка: <strong style="color: #3498db;">{{ item.max_bid }}₽</strong></div>
+                        <div class="small" style="margin-top: 5px;">Текущая цена: <strong>{{ item.auction.current_price }}₽</strong></div>
+                    </div>
+                    
+                    {% if item.is_winning %}
+                        <div style="padding: 10px; background: #d5f4e6; border-radius: 5px; color: #27ae60; font-weight: bold; margin: 10px 0;">
+                            🏆 Вы лидируете!
+                        </div>
+                    {% else %}
+                        <div style="padding: 10px; background: #fadbd8; border-radius: 5px; color: #c0392b; font-weight: bold; margin: 10px 0;">
+                            ❌ Вас перебили
+                        </div>
+                    {% endif %}
+                    
+                    {% if item.auction.is_active %}
+                        <div class="small" style="color: #e74c3c;">
+                            ⏱️ Осталось: {{ item.auction.time_remaining }}
+                        </div>
+                    {% else %}
+                        <div class="small" style="color: #7f8c8d;">
+                            Аукцион завершён
+                        </div>
+                    {% endif %}
+                    
+                    <div style="margin-top: 15px;">
+                        <a href="{% url 'auction:auction_detail' item.auction.id %}" class="btn-primary" style="display: block; text-align: center;">
+                            Подробнее →
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="stat-card" style="text-align: center;">
+            <p style="color: #7f8c8d;">Вы еще не делали ставок</p>
+            <a href="{% url 'auction:auction' %}" class="btn-primary" style="background: #3498db; margin-top: 15px;">
+                Посмотреть аукционы
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .btn-primary {
+        background-color: #3498db;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2980b9;
+    }
+</style>
+{% endblock %}

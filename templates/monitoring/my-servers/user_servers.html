@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Мои серверы - Мониторинг - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <h2 class="section-title">📊 Мониторинг моих серверов</h2>
+    
+    <!-- Статистика пользователя -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="small">Мои серверы</div>
+                    <div style="font-size: 2em; font-weight: bold;">{{ total_servers }}</div>
+                </div>
+                <div style="font-size: 2em;">🖥️</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="small">Онлайн</div>
+                    <div style="font-size: 2em; font-weight: bold; color: #4ade80;">{{ online_servers }}</div>
+                </div>
+                <div style="font-size: 2em;">🟢</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="small">Игроки онлайн</div>
+                    <div style="font-size: 2em; font-weight: bold; color: #4cc9f0;">{{ total_online_players }}</div>
+                </div>
+                <div style="font-size: 2em;">👥</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="small">Общий мониторинг</div>
+                    <a href="{% url 'monitoring:monitoring' %}" class="btn-primary" style="margin-top: 5px;">📈</a>
+                </div>
+                <div style="font-size: 2em;">🌐</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Серверы пользователя -->
+    <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>🎮 Мои серверы</h4>
+            <div>
+                <button class="btn-primary" onclick="refreshUserServers()">🔄 Обновить</button>
+                <a href="{% url 'servers:server_ordering' %}" class="btn-primary">➕ Заказать</a>
+            </div>
+        </div>
+
+        {% if servers %}
+        <div class="servers-grid">
+            {% for server in servers %}
+            <div class="server-card {% if server.detailed_status.process_active %}server-online{% else %}server-offline{% endif %}">
+                <div class="server-header">
+                    <h5>{{ server.name }}</h5>
+                    <span class="status-badge status-{{ server.status_badge }}">
+                        {% if server.detailed_status.process_active %}Online{% else %}Offline{% endif %}
+                    </span>
+                </div>
+                
+                <div class="server-info">
+                    <div class="info-row">
+                        <span>Мод:</span>
+                        <strong>{{ server.mod|default:"Unknown" }}</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>IP:Порт:</span>
+                        <code>{{ server.ip }}:{{ server.port }}</code>
+                    </div>
+                    <div class="info-row">
+                        <span>Слоты:</span>
+                        <span>{{ server.slots }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Игроки:</span>
+                        <span style="color: {% if server.online_players > 0 %}#4ade80{% else %}#9ca3af{% endif %};">
+                            {{ server.online_players }}/{{ server.slots }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if server.detailed_status %}
+                <div class="server-stats">
+                    <div class="stat">
+                        <small>CPU</small>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: {{ server.detailed_status.cpu_usage|default:0 }}%">
+                                {{ server.detailed_status.cpu_usage|default:0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat">
+                        <small>RAM</small>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: {{ server.detailed_status.memory_usage|default:0 }}%">
+                                {{ server.detailed_status.memory_usage|default:0 }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="server-actions">
+                    <a href="{% url 'monitoring:server_detail' server.id %}" class="btn-action btn-info">📊 Детали</a>
+                    {% if server.detailed_status.process_active %}
+                    <button class="btn-action btn-success" onclick="copyAddress('{{ server.ip }}:{{ server.port }}')">📋 IP</button>
+                    {% endif %}
+                    <a href="{% url 'servers:server_status' server.id %}" class="btn-action btn-primary">⚙️ Управление</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 3em; opacity: 0.5;">🖥️</div>
+            <h4>У вас нет серверов</h4>
+            <p>Закажите свой первый игровой сервер!</p>
+            <a href="{% url 'servers:server_ordering' %}" class="btn-primary">Заказать сервер</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function refreshUserServers() {
+    fetch('{% url "monitoring:api_user_servers_status" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.error) {
+                showNotification('Данные серверов обновлены', 'success');
+                // Здесь можно добавить динамическое обновление интерфейса
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }
+        })
+        .catch(error => {
+            showNotification('Ошибка обновления', 'error');
+        });
+}
+
+function copyAddress(address) {
+    navigator.clipboard.writeText(address).then(() => {
+        showNotification('Адрес скопирован: ' + address, 'success');
+    });
+}
+
+// Авто-обновление каждые 30 секунд
+setInterval(refreshUserServers, 30000);
+</script>
+
+<style>
+.servers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.server-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.server-card.server-online {
+    border-left: 4px solid #4ade80;
+}
+
+.server-card.server-offline {
+    border-left: 4px solid #f87171;
+}
+
+.server-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.server-header h5 {
+    margin: 0;
+    color: #fff;
+}
+
+.server-info {
+    margin-bottom: 15px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+.info-row span:first-child {
+    color: #9ca3af;
+}
+
+.server-stats {
+    margin-bottom: 15px;
+}
+
+.stat {
+    margin-bottom: 10px;
+}
+
+.progress {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    height: 20px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background: linear-gradient(135deg, #4361ee, #4cc9f0);
+    color: #fff;
+    font-size: 0.7em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: width 0.3s ease;
+}
+
+.server-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
+}
+
+.btn-info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.btn-success { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.btn-primary { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+
+.btn-action:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .servers-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .server-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

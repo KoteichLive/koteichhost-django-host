@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Вход - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="public-content">
+    <div style="max-width: 400px; margin: 100px auto; padding: 20px;">
+        <div class="navbar-brand" style="border: none; margin-bottom: 30px; text-align: center;">
+            <h3>Koteich Host</h3>
+            <p class="small" style="margin-top: 10px;">Панель управления серверами</p>
+        </div>
+        
+        <div class="stat-card">
+            <h3 style="margin-bottom: 20px; text-align: center;">Вход в систему</h3>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <!-- Добавляем скрытое поле next -->
+                {% if request.GET.next %}
+                <input type="hidden" name="next" value="{{ request.GET.next }}">
+                {% endif %}
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="id_username" style="display: block; margin-bottom: 5px;">Имя пользователя:</label>
+                    <input type="text" name="username" id="id_username" class="form-control" required autofocus>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="id_password" style="display: block; margin-bottom: 5px;">Пароль:</label>
+                    <input type="password" name="password" id="id_password" class="form-control" required>
+                </div>
+                
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">
+                    Войти
+                </button>
+            </form>
+            
+            {% if form.errors %}
+            <div style="color: #f87171; margin-top: 15px; text-align: center;">
+                Неверное имя пользователя или пароль.
+            </div>
+            {% endif %}
+            
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                <p class="small">Нет аккаунта? 
+                    <a href="{% url 'accounts:register' %}" style="color: #4cc9f0;">Зарегистрироваться</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

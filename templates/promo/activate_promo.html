@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Активировать промокод - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="section-title">✅ Активировать промокод</h1>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group mb-4">
+                            <label for="id_code">Код промокода:</label>
+                            <input type="text" name="code" id="id_code" 
+                                   class="form-control" placeholder="Введите промокод" 
+                                   required style="text-transform: uppercase;">
+                            <small class="form-text text-muted">
+                                Введите промокод в формате: ABC12345
+                            </small>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-success">
+                                ✅ Активировать
+                            </button>
+                            <a href="{% url 'promo:dashboard' %}" class="btn btn-secondary">
+                                Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

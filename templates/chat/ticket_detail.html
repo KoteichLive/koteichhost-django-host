@@ -1,0 +1,469 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Тикет #{{ ticket.id }} - Техподдержка{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <div class="breadcrumb-nav">
+        <a href="{% url 'chat:chat' %}">💬 Чат</a>
+        <span class="separator">/</span>
+        <a href="{% url 'chat:tickets' %}">🎫 Техподдержка</a>
+        <span class="separator">/</span>
+        <span>#{{ ticket.id }}</span>
+    </div>
+    
+    <div class="ticket-detail-container">
+        <!-- Заголовок и информация -->
+        <div class="ticket-detail-header">
+            <div class="header-content">
+                <h1>#{{ ticket.id }} - {{ ticket.subject }}</h1>
+                <div class="ticket-details-meta">
+                    <div class="detail-item">
+                        <span class="label">От:</span>
+                        <span class="value">{{ ticket.user.username }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Статус:</span>
+                        <span class="value status-{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Приоритет:</span>
+                        <span class="value priority-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Создано:</span>
+                        <span class="value">{{ ticket.created_at|date:"d.m.Y H:i" }}</span>
+                    </div>
+                    {% if ticket.assigned_to %}
+                    <div class="detail-item">
+                        <span class="label">Назначено:</span>
+                        <span class="value">{{ ticket.assigned_to.username }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if request.user.is_staff %}
+            <div class="header-controls">
+                <div class="status-selector">
+                    <label>Изменить статус:</label>
+                    <select id="statusSelect" class="form-select" onchange="updateTicketStatus()">
+                        <option value="new" {% if ticket.status == 'new' %}selected{% endif %}>Новый</option>
+                        <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>В процессе</option>
+                        <option value="waiting" {% if ticket.status == 'waiting' %}selected{% endif %}>Ожидание</option>
+                        <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Решен</option>
+                        <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>Закрыт</option>
+                    </select>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Исходное сообщение -->
+        <div class="ticket-original-message">
+            <div class="message-label">Исходное сообщение:</div>
+            <div class="message-content">
+                {{ ticket.message }}
+            </div>
+        </div>
+        
+        <!-- Ответы -->
+        <div class="ticket-replies">
+            <h2>Переписка ({{ replies.count }} ответов)</h2>
+            
+            {% if replies %}
+                <div class="replies-list">
+                    {% for reply in replies %}
+                    <div class="reply-message {% if reply.author.is_staff %}admin-reply{% else %}user-reply{% endif %}">
+                        <div class="reply-header">
+                            <div class="reply-author">
+                                {% if reply.author.is_staff %}
+                                <span class="admin-badge">👨‍💼 Администратор</span>
+                                {% endif %}
+                                <strong>{{ reply.author.username }}</strong>
+                            </div>
+                            <span class="reply-date">{{ reply.created_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        <div class="reply-content">
+                            {{ reply.content }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-replies">
+                    <p>Ответов еще нет</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Форма для добавления ответа -->
+        <div class="reply-form-section">
+            <h3>Добавить ответ</h3>
+            {% csrf_token %}
+            <form id="replyForm">
+                <div class="form-group">
+                    <textarea id="replyContent" name="content" class="reply-textarea" placeholder="Введите ваш ответ..." required></textarea>
+                </div>
+                <button type="submit" class="btn-submit-reply">Отправить ответ</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateTicketStatus() {
+    const newStatus = document.getElementById('statusSelect').value;
+    
+    fetch('{% url "chat:update_status" ticket.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Статус обновлен: ' + data.status);
+            location.reload();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Ошибка отправки: ' + error);
+        console.error('Error:', error);
+    });
+}
+
+document.getElementById('replyForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const content = document.getElementById('replyContent').value.trim();
+    if (!content) {
+        alert('Пожалуйста, введите текст ответа');
+        return;
+    }
+    
+    fetch('{% url "chat:ticket_reply" ticket.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            content: content
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Ответ отправлен');
+            location.reload();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Ошибка отправки: ' + error);
+        console.error('Error:', error);
+    });
+});
+</script>
+
+<style>
+    .ticket-detail-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .ticket-detail-header {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        display: flex;
+        justify-content: space-between;
+        gap: 25px;
+    }
+
+    .header-content {
+        flex: 1;
+    }
+
+    .ticket-detail-header h1 {
+        margin: 0 0 20px 0;
+        color: #a8dadc;
+        font-size: 1.8em;
+    }
+
+    .ticket-details-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+    }
+
+    .detail-item {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(76, 201, 240, 0.1);
+    }
+
+    .detail-item .label {
+        display: block;
+        color: #888;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .detail-item .value {
+        display: block;
+        color: #4cc9f0;
+        font-weight: 600;
+    }
+
+    .detail-item .value.status-new {
+        color: #4cc9f0;
+    }
+
+    .detail-item .value.status-in_progress {
+        color: #ffc107;
+    }
+
+    .detail-item .value.status-waiting {
+        color: #ff9800;
+    }
+
+    .detail-item .value.status-resolved {
+        color: #4caf50;
+    }
+
+    .detail-item .value.status-closed {
+        color: #999;
+    }
+
+    .detail-item .value.priority-low {
+        color: #4caf50;
+    }
+
+    .detail-item .value.priority-medium {
+        color: #ff9800;
+    }
+
+    .detail-item .value.priority-high {
+        color: #f44336;
+    }
+
+    .header-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        min-width: 200px;
+    }
+
+    .status-selector {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(76, 201, 240, 0.1);
+    }
+
+    .status-selector label {
+        display: block;
+        color: #888;
+        font-size: 0.9em;
+        margin-bottom: 8px;
+    }
+
+    .form-select {
+        width: 100%;
+        padding: 8px;
+        background: rgba(76, 201, 240, 0.1);
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 6px;
+        color: #a8dadc;
+        font-size: 0.9em;
+    }
+
+    .form-select:focus {
+        outline: none;
+        border-color: rgba(76, 201, 240, 0.4);
+        background: rgba(76, 201, 240, 0.15);
+    }
+
+    .ticket-original-message {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .message-label {
+        color: #888;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+
+    .message-content {
+        color: #e0e0e0;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(76, 201, 240, 0.1);
+    }
+
+    .ticket-replies {
+        margin-bottom: 30px;
+    }
+
+    .ticket-replies h2 {
+        color: #a8dadc;
+        margin: 0 0 20px 0;
+        font-size: 1.3em;
+    }
+
+    .replies-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .reply-message {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 12px;
+        padding: 15px;
+    }
+
+    .reply-message.admin-reply {
+        border-left: 4px solid rgba(255, 193, 7, 0.5);
+        background: linear-gradient(135deg, rgba(255, 193, 7, 0.08), rgba(255, 152, 0, 0.03));
+    }
+
+    .reply-message.user-reply {
+        border-left: 4px solid rgba(76, 201, 240, 0.5);
+    }
+
+    .reply-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(76, 201, 240, 0.1);
+    }
+
+    .reply-author {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .admin-badge {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
+
+    .reply-author strong {
+        color: #a8dadc;
+    }
+
+    .reply-date {
+        color: #888;
+        font-size: 0.85em;
+    }
+
+    .reply-content {
+        color: #e0e0e0;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .no-replies {
+        text-align: center;
+        padding: 30px;
+        color: #888;
+    }
+
+    .reply-form-section {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 12px;
+        padding: 25px;
+    }
+
+    .reply-form-section h3 {
+        margin: 0 0 20px 0;
+        color: #a8dadc;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .reply-textarea {
+        width: 100%;
+        min-height: 150px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 8px;
+        color: #e0e0e0;
+        font-family: inherit;
+        resize: vertical;
+        transition: all 0.2s;
+    }
+
+    .reply-textarea:focus {
+        outline: none;
+        border-color: rgba(76, 201, 240, 0.5);
+        background: rgba(76, 201, 240, 0.05);
+    }
+
+    .btn-submit-reply {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.2), rgba(76, 201, 240, 0.1));
+        color: #4cc9f0;
+        border: 1px solid rgba(76, 201, 240, 0.3);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-submit-reply:hover {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.3), rgba(76, 201, 240, 0.2));
+        border-color: rgba(76, 201, 240, 0.5);
+    }
+
+    @media (max-width: 768px) {
+        .ticket-detail-header {
+            flex-direction: column;
+        }
+
+        .ticket-details-meta {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+{% endblock %}

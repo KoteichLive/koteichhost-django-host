@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ category.name }} - Форум{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <!-- Навигация -->
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'forum:forum' %}" class="small">Форум</a> 
+        > <span class="small">{{ category.name }}</span>
+    </div>
+
+    <!-- Заголовок категории -->
+    <div class="category-header">
+        <div class="category-info">
+            <h1>📂 {{ category.name }}</h1>
+            {% if category.description %}
+            <p class="category-description">{{ category.description }}</p>
+            {% endif %}
+            <div class="category-meta">
+                <span>📁 {{ topics.paginator.count }} тем</span>
+                <span>📄 {{ category.posts_count }} статей</span>
+            </div>
+        </div>
+        {% if user.is_authenticated %}
+        <a href="{% url 'forum:create_topic' %}" class="btn-primary create-topic-btn">➕ Новая тема</a>
+        {% endif %}
+    </div>
+
+    <!-- Список тем -->
+    <div class="topics-list">
+        {% if topics %}
+            {% for topic in topics %}
+            <a href="{% url 'forum:topic_posts' topic.id %}" class="topic-card">
+                <div class="topic-status">
+                    {% if topic.is_pinned %}📌{% endif %}
+                    {% if topic.is_closed %}🔒{% endif %}
+                </div>
+                <div class="topic-content">
+                    <h3>{{ topic.title }}</h3>
+                    <div class="topic-meta">
+                        <span>👤 {{ topic.author.username }}</span>
+                        <span>📅 {{ topic.created_at|date:"d.m.Y H:i" }}</span>
+                    </div>
+                    <div class="topic-stats">
+                        <span>👁️ {{ topic.views }}</span>
+                        <span>📄 {{ topic.posts_count }}</span>
+                    </div>
+                </div>
+                <div class="topic-activity">
+                    {% if topic.last_activity %}
+                    <div class="last-post" title="Последняя активность: {{ topic.last_activity|date:'d.m.Y H:i' }}">
+                        📅 {{ topic.last_activity|date:"d.m.Y" }}
+                    </div>
+                    {% else %}
+                    <div class="no-posts">Нет сообщений</div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-topics">
+                <div class="empty-icon">📭</div>
+                <h3>Пока нет тем</h3>
+                <p>Будьте первым, кто создаст тему в этой категории!</p>
+                {% if user.is_authenticated %}
+                <a href="{% url 'forum:create_topic' %}" class="btn-primary">Создать первую тему</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Пагинация -->
+    {% if topics.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if topics.has_previous %}
+            <a href="?page={{ topics.previous_page_number }}" class="page-btn">‹ Назад</a>
+            {% endif %}
+            
+            <span class="page-info">
+                Страница {{ topics.number }} из {{ topics.paginator.num_pages }}
+            </span>
+            
+            {% if topics.has_next %}
+            <a href="?page={{ topics.next_page_number }}" class="page-btn">Вперед ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    /* Заголовок категории */
+    .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+        gap: 20px;
+    }
+
+    .category-info h1 {
+        margin: 0 0 8px 0;
+        color: #e0e0e0;
+        font-size: 1.4em;
+    }
+
+    .category-description {
+        margin: 0 0 12px 0;
+        color: #b0b0b0;
+        font-size: 0.95em;
+        line-height: 1.4;
+    }
+
+    .category-meta {
+        display: flex;
+        gap: 16px;
+        color: #888;
+        font-size: 0.9em;
+    }
+
+    .create-topic-btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    /* Список тем */
+    .topics-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .topic-card {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 14px;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s ease;
+        gap: 12px;
+    }
+
+    .topic-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(76, 201, 240, 0.3);
+        transform: translateY(-1px);
+    }
+
+    .topic-status {
+        flex-shrink: 0;
+        font-size: 14px;
+        width: 24px;
+        text-align: center;
+    }
+
+    .topic-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .topic-content h3 {
+        margin: 0 0 6px 0;
+        color: #e0e0e0;
+        font-size: 1em;
+        font-weight: 500;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .topic-meta {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 4px;
+    }
+
+    .topic-meta span {
+        color: #888;
+        font-size: 0.8em;
+    }
+
+    .topic-stats {
+        display: flex;
+        gap: 12px;
+    }
+
+    .topic-stats span {
+        color: #666;
+        font-size: 0.75em;
+    }
+
+    .topic-activity {
+        flex-shrink: 0;
+        text-align: right;
+        min-width: 100px;
+    }
+
+    .last-post,
+    .no-posts {
+        color: #888;
+        font-size: 0.8em;
+    }
+
+    /* Пустой список тем */
+    .empty-topics {
+        text-align: center;
+        padding: 40px 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .empty-topics h3 {
+        margin: 0 0 8px 0;
+        color: #e0e0e0;
+    }
+
+    .empty-topics p {
+        margin: 0 0 20px 0;
+        color: #888;
+    }
+
+    /* Пагинация */
+    .pagination-container {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .pagination {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.04);
+        padding: 8px 16px;
+        border-radius: 8px;
+    }
+
+    .page-btn {
+        padding: 6px 12px;
+        background: rgba(76, 201, 240, 0.2);
+        color: #4cc9f0;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.9em;
+        transition: all 0.2s ease;
+    }
+
+    .page-btn:hover {
+        background: rgba(76, 201, 240, 0.3);
+    }
+
+    .page-info {
+        color: #888;
+        font-size: 0.9em;
+        padding: 0 8px;
+    }
+
+    /* Адаптивность */
+    @media (max-width: 768px) {
+        .category-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .create-topic-btn {
+            align-self: flex-start;
+        }
+
+        .topic-card {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .topic-status {
+            align-self: flex-start;
+        }
+
+        .topic-activity {
+            align-self: flex-end;
+            text-align: left;
+        }
+
+        .topic-meta,
+        .topic-stats {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pagination {
+            flex-direction: column;
+            gap: 8px;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Мои аукционы{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📋 Мои аукционы</h2>
+        <a href="{% url 'auction:create_auction' %}" class="btn-primary">+ Создать новый</a>
+    </div>
+    
+    <div style="margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+            <div class="stat-card">
+                <h4>Всего аукционов</h4>
+                <div style="font-size: 2em; font-weight: bold; color: #3498db;">{{ auctions|length }}</div>
+            </div>
+            <div class="stat-card">
+                <h4>Активных</h4>
+                <div style="font-size: 2em; font-weight: bold; color: #2ecc71;">{{ active_count }}</div>
+            </div>
+            <div class="stat-card">
+                <h4>Продано</h4>
+                <div style="font-size: 2em; font-weight: bold; color: #27ae60;">{{ sold_count }}</div>
+            </div>
+        </div>
+    </div>
+    
+    {% if auctions %}
+        <div class="stats-grid">
+            {% for auction in auctions %}
+                <div class="stat-card">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h4>{{ auction.name }}</h4>
+                            <p class="small">{{ auction.mod }} | Слоты: {{ auction.slots }}</p>
+                        </div>
+                        {% if auction.status == 'active' %}
+                            <span style="background: #2ecc71; color: white; padding: 5px 10px; border-radius: 3px; font-size: 0.85em; font-weight: bold;">
+                                Активен
+                            </span>
+                        {% elif auction.status == 'sold' %}
+                            <span style="background: #27ae60; color: white; padding: 5px 10px; border-radius: 3px; font-size: 0.85em; font-weight: bold;">
+                                Продан
+                            </span>
+                        {% elif auction.status == 'cancelled' %}
+                            <span style="background: #e74c3c; color: white; padding: 5px 10px; border-radius: 3px; font-size: 0.85em; font-weight: bold;">
+                                Отменён
+                            </span>
+                        {% else %}
+                            <span style="background: #95a5a6; color: white; padding: 5px 10px; border-radius: 3px; font-size: 0.85em; font-weight: bold;">
+                                {{ auction.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div style="margin: 15px 0; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                        <div class="small">Начальная цена: <strong>{{ auction.starting_price }}₽</strong></div>
+                        <div class="small" style="margin-top: 5px;">Текущая цена: <strong style="color: #27ae60;">{{ auction.current_price }}₽</strong></div>
+                        <div class="small" style="margin-top: 5px;">Ставок: <strong>{{ auction.bids.count }}</strong></div>
+                    </div>
+                    
+                    {% if auction.status == 'sold' %}
+                        <div class="small" style="color: #27ae60; font-weight: bold;">
+                            ✓ Продан {{ auction.sold_at|date:"d.m.Y H:i" }}
+                        </div>
+                        <div class="small">Покупатель: <strong>{{ auction.buyer.username }}</strong></div>
+                    {% else %}
+                        <div class="small" style="color: #e74c3c;">
+                            ⏱️ {% if auction.is_active %}Осталось: {{ auction.time_remaining }}{% else %}Завершён{% endif %}
+                        </div>
+                    {% endif %}
+                    
+                    <div style="margin-top: 15px;">
+                        <a href="{% url 'auction:auction_detail' auction.id %}" class="btn-primary" style="display: block; text-align: center;">
+                            Подробнее →
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="stat-card" style="text-align: center;">
+            <p style="color: #7f8c8d;">У вас ещё нет аукционов</p>
+            <a href="{% url 'auction:create_auction' %}" class="btn-primary" style="background: #3498db; margin-top: 15px;">
+                Выставить первый сервер
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .btn-primary {
+        background-color: #3498db;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2980b9;
+    }
+</style>
+{% endblock %}

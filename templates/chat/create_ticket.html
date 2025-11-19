@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Создать тикет - Техподдержка{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <div class="breadcrumb-nav">
+        <a href="{% url 'chat:chat' %}">💬 Чат</a>
+        <span class="separator">/</span>
+        <a href="{% url 'chat:tickets' %}">🎫 Техподдержка</a>
+        <span class="separator">/</span>
+        <span>Создать тикет</span>
+    </div>
+    
+    <div class="create-ticket-container">
+        <div class="create-ticket-header">
+            <h1>📝 Создать тикет техподдержки</h1>
+            <p>Опишите вашу проблему или вопрос, и наша команда поможет вам в кратчайшие сроки</p>
+        </div>
+        
+        <form method="post" class="ticket-form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="subject">Тема тикета <span class="required">*</span></label>
+                <input type="text" id="subject" name="subject" class="form-control" 
+                       placeholder="Кратко опишите проблему" required maxlength="255">
+                <small class="form-hint">Максимум 255 символов</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="message">Описание <span class="required">*</span></label>
+                <textarea id="message" name="message" class="form-control" 
+                          placeholder="Подробно опишите вашу проблему, что вы пробовали делать и какой результат ожидаете..."
+                          required rows="8"></textarea>
+                <small class="form-hint">Чем подробнее описание, тем быстрее мы решим вашу проблему</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="priority">Приоритет</label>
+                <select id="priority" name="priority" class="form-control">
+                    <option value="low">🟢 Низкий</option>
+                    <option value="medium" selected>🟡 Средний</option>
+                    <option value="high">🔴 Высокий</option>
+                </select>
+                <small class="form-hint">Выберите приоритет вашей проблемы</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">📤 Создать тикет</button>
+                <a href="{% url 'chat:tickets' %}" class="btn-cancel">Отменить</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .create-ticket-container {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .create-ticket-header {
+        text-align: center;
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid rgba(76, 201, 240, 0.2);
+    }
+
+    .create-ticket-header h1 {
+        margin: 0 0 10px 0;
+        font-size: 1.8em;
+        color: #e0e0e0;
+    }
+
+    .create-ticket-header p {
+        margin: 0;
+        color: #888;
+        font-size: 0.95em;
+    }
+
+    .ticket-form {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(76, 201, 240, 0.1);
+        border-radius: 12px;
+        padding: 25px;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 10px;
+        color: #e0e0e0;
+        font-weight: 500;
+        font-size: 1em;
+    }
+
+    .required {
+        color: #f87171;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        color: #e0e0e0;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 0.95em;
+        line-height: 1.5;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #4cc9f0;
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.1);
+    }
+
+    .form-control::placeholder {
+        color: #666;
+    }
+
+    textarea.form-control {
+        resize: vertical;
+        min-height: 150px;
+    }
+
+    .form-hint {
+        display: block;
+        margin-top: 6px;
+        color: #666;
+        font-size: 0.85em;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(76, 201, 240, 0.1);
+    }
+
+    .btn-submit {
+        flex: 1;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #4361ee, #4cc9f0);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 1em;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .btn-submit:hover {
+        background: linear-gradient(135deg, #3a0ca3, #4361ee);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+    }
+
+    .btn-cancel {
+        flex: 1;
+        padding: 12px 20px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #4cc9f0;
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 1em;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .btn-cancel:hover {
+        background: rgba(76, 201, 240, 0.1);
+        border-color: rgba(76, 201, 240, 0.3);
+    }
+
+    @media (max-width: 768px) {
+        .create-ticket-container {
+            margin: 0 15px;
+        }
+
+        .ticket-form {
+            padding: 15px;
+        }
+
+        .create-ticket-header {
+            margin-bottom: 25px;
+        }
+
+        .create-ticket-header h1 {
+            font-size: 1.3em;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}

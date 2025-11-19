@@ -1,0 +1,856 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load forum_filters %}
+
+{% block title %}{{ topic.title }} - Форум{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <!-- Навигация -->
+    <div class="breadcrumb-nav">
+        <a href="{% url 'forum:forum' %}">💬 Форум</a> 
+        <span class="separator">/</span>
+        <a href="{% url 'forum:category' topic.category.id %}">{{ topic.category.name }}</a>
+        <span class="separator">/</span>
+        <span>{{ topic.title|truncatewords:5 }}</span>
+    </div>
+    
+    <!-- Заголовок темы -->
+    <div class="topic-header-card">
+        <div class="topic-header-content">
+            <div class="topic-title-bar">
+                <h1>
+                    {% if topic.is_pinned %}📌{% endif %}
+                    {{ topic.title }}
+                    {% if topic.is_closed %}<span class="badge-closed">🔒 Закрыто</span>{% endif %}
+                </h1>
+            </div>
+            <div class="topic-meta-info">
+                <span class="meta-item">👤 {{ topic.author.username }}</span>
+                <span class="meta-item">📅 {{ topic.created_at|date:"d.m.Y H:i" }}</span>
+                <span class="meta-item">👁️ {{ topic.views }} просмотров</span>
+                <span class="meta-item">📄 {{ posts.paginator.count }} сообщений</span>
+            </div>
+        </div>
+        
+        <!-- Действия с темой -->
+        {% if user.is_staff or user == topic.author %}
+        <div class="topic-actions">
+            {% if user.is_staff %}
+                <form method="post" action="{% url 'forum:toggle_topic' topic.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="action-btn action-toggle">
+                        {% if topic.is_closed %}🔓 Открыть{% else %}🔒 Закрыть{% endif %}
+                    </button>
+                </form>
+                
+                <form method="post" action="{% url 'forum:toggle_pin' topic.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="action-btn action-pin">
+                        {% if topic.is_pinned %}📍 Открепить{% else %}📌 Закрепить{% endif %}
+                    </button>
+                </form>
+            {% endif %}
+            
+            {% if user == topic.author %}
+            <a href="{% url 'forum:edit_topic' topic.id %}" class="action-btn action-edit">
+                ✏️ Редактировать
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Сообщения -->
+    <div class="posts-container">
+        {% for post in posts %}
+        <div class="post-card" id="post-{{ post.id }}">
+            <div class="post-header">
+                <div class="post-author-info">
+                    <span class="author-name">{{ post.author.username }}</span>
+                    {% if post.author.is_staff %}
+                    <span class="staff-badge">👑 Модератор</span>
+                    {% endif %}
+                    <span class="post-number">#{{ forloop.counter }}</span>
+                </div>
+                <div class="post-timestamp">
+                    📅 {{ post.created_at|date:"d.m.Y H:i" }}
+                    {% if post.created_at != post.updated_at %}
+                    <span class="edit-marker" title="Отредактировано: {{ post.updated_at|date:'d.m.Y H:i' }}">(ред.)</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if post.status == 'pending' %}
+            <div class="post-status-badge status-pending">
+                ⏳ На одобрении администратором
+            </div>
+            {% elif post.status == 'rejected' %}
+            <div class="post-status-badge status-rejected">
+                ❌ Отклонено{% if post.rejection_reason %}: {{ post.rejection_reason }}{% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="post-content">
+                <pre class="post-text">{{ post.content }}</pre>
+            </div>
+            
+            {% if post.status != 'rejected' %}
+            <div class="post-reward-info">
+                {% if post.status == 'pending' %}
+                    {% if post.reward_amount > 0 %}
+                    <span class="reward-badge reward-pending">
+                        💰 Предварительная оценка: +{{ post.reward_amount }}₽ (при одобрении)
+                    </span>
+                    {% endif %}
+                {% elif post.reward_amount > 0 %}
+                    <span class="reward-badge reward-earned">
+                        💰 Вознаграждение: +{{ post.reward_amount }}₽
+                    </span>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Действия над постом -->
+            {% if user.is_authenticated %}
+            <div class="post-footer">
+                {% if user == post.author or user.is_staff %}
+                <a href="{% url 'forum:edit_post' post.id %}" class="post-action edit-action">
+                    ✏️ Редактировать
+                </a>
+                {% endif %}
+                
+                {% if post.edits.exists %}
+                <a href="{% url 'forum:post_history' post.id %}" class="post-action history-action">
+                    📋 История ({{ post.edits.count }})
+                </a>
+                {% endif %}
+                
+                {% if user.is_staff and user != post.author %}
+                <form method="post" action="{% url 'forum:delete_post' post.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="post-action delete-action" 
+                            onclick="return confirm('Удалить это сообщение?')">
+                        🗑️ Удалить
+                    </button>
+                </form>
+                {% endif %}
+                {% if user == post.author and post.status == 'pending' %}
+                <form method="post" action="{% url 'forum:delete_post' post.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="post-action delete-action" 
+                            onclick="return confirm('Отменить отправку этого сообщения?')">
+                        ⛔ Отменить отправку
+                    </button>
+                </form>
+                {% endif %}
+
+                {# Кнопка подтверждения видна только модераторам и только для ожидающих постов #}
+                {% if user.is_staff and post.status == 'pending' %}
+                <form method="post" action="{% url 'forum:approve_post' post.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="post-action" 
+                            onclick="return confirm('Подтвердить это сообщение и сделать видимым для всех?')"
+                            style="background: rgba(33,150,83,0.15); color: #38a169;">
+                        ✅ Подтвердить
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Пагинация -->
+    {% if posts.has_other_pages %}
+    <div class="pagination-card">
+        <div class="pagination-info">
+            Страница {{ posts.number }} из {{ posts.paginator.num_pages }}
+        </div>
+        <div class="pagination-buttons">
+            {% if posts.has_previous %}
+            <a href="?page={{ posts.previous_page_number }}" class="page-nav-btn">‹ Назад</a>
+            {% endif %}
+            
+            {% if posts.has_next %}
+            <a href="?page={{ posts.next_page_number }}" class="page-nav-btn">Вперед ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Форма нового сообщения -->
+    {% if user.is_authenticated %}
+        {% if not topic.is_closed or user.is_staff %}
+        <div class="reply-section">
+            <h3>💬 Добавить сообщение</h3>
+            <form method="post" action="{% url 'forum:add_post' topic.id %}" class="post-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_content">Ваше сообщение</label>
+                    {{ post_form.content }}
+                    <div class="form-hint">
+                        Поддерживается маркдаун: **жирный**, *наклонный*, `код`, ```блок кода```
+                    </div>
+                    {% if post_form.content.errors %}
+                    <div class="form-error">
+                        {{ post_form.content.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn-submit">
+                    📤 Опубликовать сообщение
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <div class="info-card info-closed">
+            <h4>🔒 Тема закрыта</h4>
+            <p>Эта тема закрыта для обсуждения. Вы не можете добавлять новые сообщения.</p>
+        </div>
+        {% endif %}
+    {% else %}
+    <div class="info-card info-login">
+        <h4>🔐 Требуется авторизация</h4>
+        <p>
+            Для написания сообщений необходимо 
+            <a href="{% url 'accounts:login' %}?next={{ request.path }}">войти</a> 
+            или <a href="{% url 'accounts:register' %}">зарегистрироваться</a>.
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    /* Хлебная крошка */
+    .breadcrumb-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(76, 201, 240, 0.15);
+        font-size: 0.9em;
+    }
+
+    .breadcrumb-nav a {
+        color: #4cc9f0;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .breadcrumb-nav a:hover {
+        color: #a8dadc;
+    }
+
+    .breadcrumb-nav .separator {
+        color: #666;
+    }
+
+    /* Шапка темы */
+    .topic-header-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+        border: 1px solid rgba(76, 201, 240, 0.15);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+
+    .topic-header-content {
+        flex: 1;
+    }
+
+    .topic-title-bar h1 {
+        margin: 0 0 15px 0;
+        font-size: 1.8em;
+        color: #e0e0e0;
+        line-height: 1.3;
+    }
+
+    .badge-closed {
+        display: inline-block;
+        background: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.7em;
+        margin-left: 10px;
+        font-weight: 500;
+    }
+
+    .topic-meta-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        font-size: 0.9em;
+    }
+
+    .meta-item {
+        color: #888;
+    }
+
+    .topic-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .action-btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        background: rgba(76, 201, 240, 0.15);
+        color: #4cc9f0;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.85em;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .action-btn:hover {
+        background: rgba(76, 201, 240, 0.25);
+        transform: translateY(-1px);
+    }
+
+    /* Контейнер постов */
+    .posts-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    /* Карточка поста */
+    .post-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(76, 201, 240, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        transition: all 0.3s;
+    }
+
+    .post-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(76, 201, 240, 0.2);
+    }
+
+    .post-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .post-author-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .author-name {
+        font-weight: 600;
+        color: #e0e0e0;
+        font-size: 1.05em;
+    }
+
+    .staff-badge {
+        background: rgba(76, 201, 240, 0.2);
+        color: #4cc9f0;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 0.75em;
+        font-weight: 500;
+    }
+
+    .post-number {
+        color: #666;
+        font-size: 0.85em;
+    }
+
+    .post-timestamp {
+        color: #888;
+        font-size: 0.85em;
+    }
+
+    .edit-marker {
+        color: #f7b731;
+        font-size: 0.75em;
+    }
+
+    /* Контент поста */
+    .post-content {
+        margin-bottom: 15px;
+        line-height: 1.6;
+        word-wrap: break-word;
+    }
+
+    .post-text {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(76, 201, 240, 0.1);
+        border-radius: 6px;
+        padding: 15px;
+        margin: 0;
+        color: #e0e0e0;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 0.95em;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-x: auto;
+    }
+
+    /* Стили для форум контента */
+    .content-paragraph {
+        margin-bottom: 12px;
+    }
+
+    .content-heading-1,
+    .content-heading-2,
+    .content-heading-3,
+    .content-heading-4,
+    .content-heading-5 {
+        margin: 20px 0 12px 0;
+        color: #a8dadc;
+        font-weight: 600;
+    }
+
+    .content-heading-1 {
+        font-size: 1.5em;
+        border-bottom: 2px solid rgba(76, 201, 240, 0.3);
+        padding-bottom: 8px;
+    }
+
+    .content-heading-2 {
+        font-size: 1.35em;
+    }
+
+    .content-heading-3 {
+        font-size: 1.2em;
+    }
+
+    .content-heading-4 {
+        font-size: 1.05em;
+    }
+
+    .content-heading-5 {
+        font-size: 0.95em;
+    }
+
+    /* Inline код */
+    .inline-code {
+        background: rgba(76, 201, 240, 0.15);
+        color: #a8dadc;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+    }
+
+    /* Блоки кода */
+    .code-block {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 8px;
+        margin: 15px 0;
+        overflow: hidden;
+    }
+
+    .code-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(76, 201, 240, 0.1);
+        padding: 10px 15px;
+        border-bottom: 1px solid rgba(76, 201, 240, 0.2);
+    }
+
+    .language-label {
+        color: #4cc9f0;
+        font-weight: 500;
+        font-size: 0.85em;
+        text-transform: uppercase;
+    }
+
+    .copy-btn {
+        background: rgba(76, 201, 240, 0.2);
+        color: #4cc9f0;
+        border: none;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8em;
+        transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+        background: rgba(76, 201, 240, 0.3);
+    }
+
+    .code-block pre {
+        margin: 0;
+        padding: 15px;
+        overflow-x: auto;
+    }
+
+    .code-content {
+        color: #a8dadc;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85em;
+        line-height: 1.5;
+    }
+
+    /* Цитаты */
+    .content-quote {
+        background: rgba(76, 201, 240, 0.08);
+        border-left: 4px solid #4cc9f0;
+        padding: 12px 15px;
+        margin: 15px 0;
+        border-radius: 4px;
+        color: #a8dadc;
+        font-style: italic;
+    }
+
+    /* Списки */
+    .content-list {
+        list-style: disc inside;
+        margin: 15px 0;
+        padding-left: 20px;
+    }
+
+    .content-list li {
+        margin-bottom: 6px;
+        color: #e0e0e0;
+    }
+
+    /* Ссылки */
+    .content-link {
+        color: #4cc9f0;
+        text-decoration: underline;
+        transition: color 0.2s;
+    }
+
+    .content-link:hover {
+        color: #a8dadc;
+    }
+
+    /* Линия разделения */
+    .content-divider {
+        border: none;
+        height: 1px;
+        background: rgba(76, 201, 240, 0.2);
+        margin: 20px 0;
+    }
+
+    /* Подвал поста */
+    .post-footer {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .post-action {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 4px;
+        background: rgba(76, 201, 240, 0.15);
+        color: #4cc9f0;
+        cursor: pointer;
+        font-size: 0.8em;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+
+    .post-action:hover {
+        background: rgba(76, 201, 240, 0.25);
+    }
+
+    .delete-action {
+        background: rgba(244, 67, 54, 0.15);
+        color: #f44336;
+    }
+
+    .delete-action:hover {
+        background: rgba(244, 67, 54, 0.25);
+    }
+
+    /* Пагинация */
+    .pagination-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(76, 201, 240, 0.1);
+        border-radius: 10px;
+        padding: 15px 20px;
+        margin-bottom: 30px;
+    }
+
+    .pagination-info {
+        color: #888;
+        font-size: 0.9em;
+    }
+
+    .page-nav-btn {
+        padding: 8px 16px;
+        background: rgba(76, 201, 240, 0.15);
+        color: #4cc9f0;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.85em;
+        transition: all 0.2s;
+    }
+
+    .page-nav-btn:hover {
+        background: rgba(76, 201, 240, 0.25);
+    }
+
+    /* Форма ответа */
+    .reply-section {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+        border: 1px solid rgba(76, 201, 240, 0.15);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+    }
+
+    .reply-section h3 {
+        margin: 0 0 20px 0;
+        color: #e0e0e0;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #e0e0e0;
+        font-weight: 500;
+    }
+
+    #id_content {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #e0e0e0;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        resize: vertical;
+        min-height: 150px;
+        transition: all 0.3s;
+    }
+
+    #id_content:focus {
+        outline: none;
+        border-color: #4cc9f0;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.2);
+    }
+
+    .form-hint {
+        color: #888;
+        font-size: 0.8em;
+        margin-top: 6px;
+    }
+
+    .form-error {
+        color: #f44336;
+        font-size: 0.85em;
+        background: rgba(244, 67, 54, 0.1);
+        padding: 8px;
+        border-radius: 4px;
+        margin-top: 8px;
+    }
+
+    .btn-submit {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #4361ee, #3a0ca3);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        font-size: 0.95em;
+        transition: all 0.3s;
+    }
+
+    .btn-submit:hover {
+        background: linear-gradient(135deg, #3a0ca3, #3006a0);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+    }
+
+    /* Инфо карточки */
+    .info-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(76, 201, 240, 0.15);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .info-card h4 {
+        margin: 0 0 8px 0;
+        color: #e0e0e0;
+    }
+
+    .info-card p {
+        margin: 0;
+        color: #888;
+    }
+
+    .info-card a {
+        color: #4cc9f0;
+        font-weight: 500;
+    }
+
+    .info-closed {
+        background: rgba(244, 67, 54, 0.1);
+        border-color: rgba(244, 67, 54, 0.2);
+    }
+
+    .info-closed h4 {
+        color: #f44336;
+    }
+
+    .info-login {
+        background: rgba(76, 201, 240, 0.1);
+        border-color: rgba(76, 201, 240, 0.2);
+    }
+
+    .info-login h4 {
+        color: #4cc9f0;
+    }
+
+    /* Информация о вознаграждении */
+    .post-reward-info {
+        margin: 12px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .reward-badge {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.9em;
+        font-weight: 500;
+        width: fit-content;
+    }
+
+    .reward-earned {
+        background: rgba(76, 200, 100, 0.15);
+        border: 1px solid rgba(76, 200, 100, 0.3);
+        color: #4cc864;
+    }
+
+    .reward-admin {
+        background: rgba(255, 193, 7, 0.15);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        color: #ffc107;
+    }
+
+    .reward-hint {
+        color: #888;
+        font-size: 0.85em;
+        font-style: italic;
+        padding-left: 8px;
+    }
+
+    /* Статусы постов */
+    .post-status-badge {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.9em;
+        font-weight: 500;
+        margin-bottom: 12px;
+    }
+
+    .status-pending {
+        background: rgba(255, 193, 7, 0.15);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        color: #ffc107;
+    }
+
+    .status-rejected {
+        background: rgba(244, 67, 54, 0.15);
+        border: 1px solid rgba(244, 67, 54, 0.3);
+        color: #f44336;
+    }
+
+    .reward-pending {
+        background: rgba(33, 150, 243, 0.15);
+        border: 1px solid rgba(33, 150, 243, 0.3);
+        color: #2196f3;
+    }
+
+    /* Адаптивность -->
+    @media (max-width: 768px) {
+        .topic-header-card {
+            flex-direction: column;
+        }
+
+        .topic-title-bar h1 {
+            font-size: 1.3em;
+        }
+
+        .topic-meta-info {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .topic-actions {
+            width: 100%;
+            flex-direction: row;
+        }
+
+        .post-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .pagination-card {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .breadcrumb-nav {
+            flex-wrap: wrap;
+        }
+    }
+</style>
+
+<script>
+    function copyCode(button) {
+        const codeBlock = button.closest('.code-block').querySelector('.code-content');
+        const text = codeBlock.textContent;
+        
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = button.textContent;
+            button.textContent = '✓ Скопировано!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        });
+    }
+</script>
+{% endblock %}

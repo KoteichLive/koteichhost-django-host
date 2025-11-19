@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Регистрация - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="public-content">
+    <div style="max-width: 400px; margin: 50px auto; padding: 20px;">
+        <div class="navbar-brand" style="border: none; margin-bottom: 30px; text-align: center;">
+            <h3>Koteich Host</h3>
+            <p class="small" style="margin-top: 10px;">Создание аккаунта</p>
+        </div>
+        
+        <div class="stat-card">
+            <h3 style="margin-bottom: 20px; text-align: center;">Регистрация</h3>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="id_username" style="display: block; margin-bottom: 5px;">Имя пользователя:</label>
+                    <input type="text" name="username" id="id_username" class="form-control" required>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="id_email" style="display: block; margin-bottom: 5px;">Email:</label>
+                    <input type="email" name="email" id="id_email" class="form-control" required>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="id_password1" style="display: block; margin-bottom: 5px;">Пароль:</label>
+                    <input type="password" name="password1" id="id_password1" class="form-control" required>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="id_password2" style="display: block; margin-bottom: 5px;">Подтверждение пароля:</label>
+                    <input type="password" name="password2" id="id_password2" class="form-control" required>
+                </div>
+                
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">
+                    Зарегистрироваться
+                </button>
+            </form>
+            
+            {% if form.errors %}
+            <div style="color: #f87171; margin-top: 15px; text-align: center;">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                <p class="small">Уже есть аккаунт? 
+                    <a href="{% url 'accounts:login' %}" style="color: #4cc9f0;">Войти</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

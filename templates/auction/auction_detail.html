@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ auction.name }} - Аукцион{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <a href="{% url 'auction:auction' %}" style="color: #3498db; text-decoration: none;">← Вернуться к аукционам</a>
+    
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px;">
+        <div>
+            <h2>{{ auction.name }}</h2>
+            
+            <div class="stat-card">
+                <h3>Информация о сервере</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td><strong>Мод:</strong></td>
+                        <td>{{ auction.mod }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Слоты:</strong></td>
+                        <td>{{ auction.slots }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Адрес:</strong></td>
+                        <td>{% if auction.ip_address %}{{ auction.ip_address }}:{{ auction.port }}{% else %}Не указан{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Тариф:</strong></td>
+                        <td>{{ auction.plan|upper }}</td>
+                    </tr>
+                </table>
+                
+                {% if auction.description %}
+                    <div style="margin-top: 15px;">
+                        <strong>Описание:</strong>
+                        <p>{{ auction.description }}</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="stat-card">
+                <h3>История ставок</h3>
+                {% if bids %}
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #ecf0f1;">
+                                <th style="text-align: left; padding: 10px;">Участник</th>
+                                <th style="text-align: right; padding: 10px;">Сумма</th>
+                                <th style="text-align: right; padding: 10px;">Время</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bid in bids %}
+                                <tr style="border-bottom: 1px solid #ecf0f1;">
+                                    <td style="padding: 10px;">{{ bid.bidder.username }}</td>
+                                    <td style="text-align: right; padding: 10px; font-weight: bold;">{{ bid.bid_amount }}₽</td>
+                                    <td style="text-align: right; padding: 10px; color: #7f8c8d;">{{ bid.created_at|date:"H:i" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p style="text-align: center; color: #7f8c8d;">Ставок ещё нет</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h3 style="margin-top: 0;">Информация об аукционе</h3>
+                
+                <div style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                    <div style="font-size: 0.9em; opacity: 0.8;">Начальная цена</div>
+                    <div style="font-size: 1.3em; font-weight: bold;">{{ auction.starting_price }}₽</div>
+                </div>
+                
+                <div style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 5px;">
+                    <div style="font-size: 0.9em; opacity: 0.8;">Текущая цена</div>
+                    <div style="font-size: 1.8em; font-weight: bold;">{{ auction.current_price }}₽</div>
+                </div>
+                
+                <div style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                    <div style="font-size: 0.9em; opacity: 0.8;">Статус</div>
+                    <div style="font-weight: bold;">
+                        {% if is_active %}
+                            <span style="color: #2ecc71;">● Активен</span>
+                        {% else %}
+                            <span style="color: #e74c3c;">● Завершён</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                    <div style="font-size: 0.9em; opacity: 0.8;">Осталось времени</div>
+                    <div style="font-weight: bold;">{{ time_remaining }}</div>
+                </div>
+                
+                <div style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                    <div style="font-size: 0.9em; opacity: 0.8;">Всего ставок</div>
+                    <div style="font-weight: bold;">{{ bids|length }}</div>
+                </div>
+                
+                {% if is_active and not is_owner and user.is_authenticated %}
+                    <form method="post" action="{% url 'auction:place_bid' auction.id %}" style="margin-top: 20px;">
+                        {% csrf_token %}
+                        <input type="number" name="bid_amount" placeholder="Ваша ставка ({{ auction.current_price|add:10 }}₽+)" 
+                               min="{{ auction.current_price|add:10 }}" step="10" style="width: 100%; padding: 10px; border: none; border-radius: 5px; margin-bottom: 10px;">
+                        <button type="submit" class="btn-primary" style="width: 100%; background: #2ecc71;">
+                            Сделать ставку
+                        </button>
+                    </form>
+                {% elif is_owner %}
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 5px; text-align: center;">
+                        <p>Это ваш аукцион</p>
+                        {% if is_active %}
+                            <a href="{% url 'auction:cancel_auction' auction.id %}" class="btn-primary" style="background: #e74c3c; display: block; margin-top: 10px;">
+                                Отменить аукцион
+                            </a>
+                        {% endif %}
+                    </div>
+                {% elif not user.is_authenticated %}
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 5px; text-align: center;">
+                        <a href="{% url 'accounts:login' %}" class="btn-primary" style="width: 100%; background: #3498db;">
+                            Войти для участия
+                        </a>
+                    </div>
+                {% else %}
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 5px; text-align: center;">
+                        <p>Этот аукцион уже завершён</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="stat-card">
+                <h3>О владельце</h3>
+                <div style="text-align: center;">
+                    <p><strong>{{ auction.owner.username }}</strong></p>
+                    <p style="color: #7f8c8d; font-size: 0.9em;">Выставлено: {{ auction.created_at|date:"d.m.Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-primary {
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s;
+    }
+</style>
+{% endblock %}

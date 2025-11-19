@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Создание темы - Форум{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <!-- Навигация -->
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'forum:forum' %}" class="small">Форум</a> 
+        > <span class="small">Создание темы</span>
+    </div>
+
+    <div class="stat-card">
+        <h2 class="section-title">📝 Создание новой темы</h2>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Поле Категория -->
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; margin-bottom: 10px; color: #e0e0e0; font-weight: 500;">
+                    📂 Категория:
+                </label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                <div style="color: #f87171; margin-top: 8px; font-size: 0.9em; padding: 8px; background: rgba(244, 67, 54, 0.1); border-radius: 4px;">
+                    {{ form.category.errors }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Заголовок -->
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; margin-bottom: 10px; color: #e0e0e0; font-weight: 500;">
+                    📝 Заголовок темы:
+                </label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                <div style="color: #f87171; margin-top: 8px; font-size: 0.9em; padding: 8px; background: rgba(244, 67, 54, 0.1); border-radius: 4px;">
+                    {{ form.title.errors }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Содержание -->
+            <div style="margin-bottom: 30px;">
+                <label style="display: block; margin-bottom: 10px; color: #e0e0e0; font-weight: 500;">
+                    📄 Содержание первой статьи:
+                </label>
+                {{ form.content }}
+                {% if form.content.errors %}
+                <div style="color: #f87171; margin-top: 8px; font-size: 0.9em; padding: 8px; background: rgba(244, 67, 54, 0.1); border-radius: 4px;">
+                    {{ form.content.errors }}
+                </div>
+                {% endif %}
+                <div class="small" style="color: #888; margin-top: 8px;">
+                    💡 Это будет первым сообщением в теме
+                </div>
+            </div>
+
+            <!-- Кнопки -->
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button type="submit" class="btn-primary" style="padding: 12px 24px; font-size: 1em;">
+                    📝 Создать тему
+                </button>
+                <a href="{% url 'forum:forum' %}" class="btn-primary" style="background: rgba(255,255,255,0.1); padding: 12px 24px;">
+                    ❌ Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Стили для красивых форм */
+    .beautiful-select {
+        transition: all 0.3s ease;
+        border: 1px solid rgba(76, 201, 240, 0.3) !important;
+    }
+    
+    .beautiful-select:focus {
+        border-color: #4cc9f0 !important;
+        box-shadow: 0 0 0 0.2rem rgba(76, 201, 240, 0.25) !important;
+        background: rgba(255,255,255,0.08) !important;
+    }
+    
+    .beautiful-input {
+        transition: all 0.3s ease;
+        border: 1px solid rgba(76, 201, 240, 0.3) !important;
+    }
+    
+    .beautiful-input:focus {
+        border-color: #4cc9f0 !important;
+        box-shadow: 0 0 0 0.2rem rgba(76, 201, 240, 0.25) !important;
+        background: rgba(255,255,255,0.08) !important;
+    }
+    
+    .beautiful-textarea {
+        transition: all 0.3s ease;
+        border: 1px solid rgba(76, 201, 240, 0.3) !important;
+        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        line-height: 1.5;
+    }
+    
+    .beautiful-textarea:focus {
+        border-color: #4cc9f0 !important;
+        box-shadow: 0 0 0 0.2rem rgba(76, 201, 240, 0.25) !important;
+        background: rgba(255,255,255,0.08) !important;
+    }
+    
+    /* Стили для placeholder */
+    .beautiful-input::placeholder,
+    .beautiful-textarea::placeholder {
+        color: #888 !important;
+        opacity: 0.8;
+    }
+    
+    /* Стили для выпадающего списка */
+    .form-select option {
+        background: #1a1a2e;
+        color: #fff;
+        padding: 10px;
+    }
+</style>
+{% endblock %}

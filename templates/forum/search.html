@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Поиск по форуму{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <!-- Навигация -->
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'forum:forum' %}" class="small">Форум</a> 
+        > <span class="small">Поиск</span>
+    </div>
+
+    <div class="stat-card">
+        <h2 class="section-title">🔍 Поиск по форуму</h2>
+        
+        <form method="get" action="{% url 'forum:search' %}" style="margin-bottom: 25px;">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" name="q" value="{{ query }}" 
+                       placeholder="Введите поисковый запрос..." 
+                       style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff;">
+                <button type="submit" class="btn-primary" style="padding: 10px 20px;">
+                    🔍 Найти
+                </button>
+            </div>
+        </form>
+
+        {% if query %}
+            {% if results %}
+            <h4 style="margin-bottom: 15px;">📋 Найдено тем: {{ results|length }}</h4>
+            
+            {% for topic in results %}
+            <div style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); {% if forloop.last %}border-bottom: none;{% endif %}">
+                <h4 style="margin: 0 0 8px 0;">
+                    <a href="{% url 'forum:topic_posts' topic.id %}" style="color: #4cc9f0; text-decoration: none;">
+                        {% if topic.is_pinned %}📌{% endif %}
+                        {{ topic.title }}
+                    </a>
+                </h4>
+                <div class="small" style="margin-bottom: 5px;">
+                    📂 {{ topic.category.name }} | 
+                    👤 {{ topic.author.username }} | 
+                    📅 {{ topic.created_at|date:"d.m.Y H:i" }}
+                </div>
+                <div class="small">
+                    👁️ {{ topic.views }} просмотров | 
+                    📄 {{ topic.posts_count }} статей
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="text-align: center; padding: 40px; color: #888;">
+                <h4>🔍 Ничего не найдено</h4>
+                <p>Попробуйте изменить поисковый запрос</p>
+            </div>
+            {% endif %}
+        {% else %}
+            <div style="text-align: center; padding: 40px; color: #888;">
+                <h4>🔍 Введите поисковый запрос</h4>
+                <p>Начните поиск по форуму</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

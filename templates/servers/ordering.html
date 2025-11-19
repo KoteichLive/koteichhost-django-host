@@ -1,0 +1,646 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Заказ серверов - Koteich Host{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <div class="page-header">
+        <h1>🛒 Заказ игрового сервера</h1>
+        <p>Выберите кейс и начните играть</p>
+    </div>
+
+    <!-- Баланс пользователя -->
+    <div class="balance-card">
+        <div class="balance-info">
+            <span class="balance-label">💰 Ваш баланс:</span>
+            <span class="balance-amount">{{ user_balance }}₽</span>
+        </div>
+        <a href="{% url 'promo:activate_promo' %}" class="btn-promo">🎫 Промокод</a>
+    </div>
+
+    {% if not cases_by_type %}
+    <div class="info-card">
+        <h3>📦 Кейсы временно недоступны</h3>
+        <p>Администратор еще не добавил доступные пакеты серверов. Пожалуйста, вернитесь позже.</p>
+    </div>
+    {% else %}
+
+    <!-- Кейсы по типам серверов -->
+    {% for server_type, cases in cases_by_type.items %}
+    <div class="cases-section">
+        <div class="section-header">
+            <h2>{{ server_type.icon }} {{ server_type.title }}</h2>
+            <p>{{ server_type.description }}</p>
+        </div>
+
+        <div class="cases-grid">
+            {% for case in cases %}
+            {% if not case.is_sold_out %}
+            <div class="case-card">
+                <!-- Бейджи -->
+                {% if case.total_limit and case.available_count <= 5 %}
+                <div class="case-badge limited-badge">
+                    🔥 ОСТАЛОСЬ: {{ case.available_count }}
+                </div>
+                {% endif %}
+
+                <!-- Заголовок -->
+                <div class="case-header">
+                    <div class="case-icon">{{ case.icon }}</div>
+                    <h3>{{ case.name }}</h3>
+                </div>
+
+                <!-- Описание -->
+                <p class="case-description">{{ case.description }}</p>
+
+                <!-- Тарифы -->
+                <div class="case-plans">
+                    <div class="plans-label">Доступные тарифы:</div>
+                    {% for case_plan in case.plans.all %}
+                        {% if case_plan.is_active %}
+                        <label class="plan-option">
+                            <input type="radio" name="case-{{ case.id }}" 
+                                   value="{{ case_plan.id }}" 
+                                   class="plan-radio"
+                                   onchange="selectPlan('{{ case.id }}', '{{ case_plan.id }}', '{{ case_plan.plan.get_name_display }}', '{{ case_plan.plan.slots }}', '{{ case_plan.hourly_price }}', '{{ case.price }}')">
+                            <div class="plan-details">
+                                <span class="plan-name">{{ case_plan.plan.get_name_display }} ({{ case_plan.plan.slots }} слотов)</span>
+                                <span class="plan-price">{{ case_plan.hourly_price }}₽/ч</span>
+                            </div>
+                        </label>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Статистика -->
+                {% if case.total_limit %}
+                <div class="case-stats">
+                    <span>Продано: {{ case.sold_count }}/{{ case.total_limit }}</span>
+                </div>
+                {% endif %}
+
+                <!-- Цена и кнопка -->
+                <div class="case-footer">
+                    <div class="case-price">{{ case.price }}₽</div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% endif %}
+
+    <!-- Модальное окно создания сервера -->
+    <div id="serverModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Создание сервера</h2>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+
+            <form method="post" id="serverForm">
+                {% csrf_token %}
+                <input type="hidden" name="case_plan_id" id="casePlanId">
+
+                <div class="modal-body">
+                    <!-- Информация о плане -->
+                    <div class="plan-info-box">
+                        <div class="info-row">
+                            <span class="info-label">Тариф:</span>
+                            <span class="info-value" id="planNameDisplay"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Слотов:</span>
+                            <span class="info-value" id="slotsDisplay"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Почасовая стоимость:</span>
+                            <span class="info-value" id="hourlyPriceDisplay"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Цена кейса:</span>
+                            <span class="info-value" id="casePriceDisplay"></span>
+                        </div>
+                    </div>
+
+                    <!-- Название сервера -->
+                    <div class="form-group">
+                        <label for="serverName">Название сервера *</label>
+                        <input type="text" id="serverName" name="name" class="form-control" 
+                               placeholder="Мой крутой сервер"
+                               maxlength="100" required>
+                        <small>Латиница, цифры, пробелы (3-100 символов)</small>
+                    </div>
+
+                    <!-- Предупреждение -->
+                    <div class="warning-box">
+                        <h4>⚠️ Внимание!</h4>
+                        <ul>
+                            <li>Сервер будет создан в GameAP</li>
+                            <li>Стоимость кейса снимется с вашего баланса сейчас</li>
+                            <li>Для работы сервера нужно пополнить его баланс</li>
+                            <li>Почасовая оплата будет сниматься с баланса сервера</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
+                    <button type="submit" class="btn-confirm">✓ Создать сервер</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+<style>
+.page-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 30px;
+    border-bottom: 2px solid rgba(76, 201, 240, 0.2);
+}
+
+.page-header h1 {
+    font-size: 2.2em;
+    margin: 0 0 10px 0;
+    background: linear-gradient(135deg, #4cc9f0, #a8dadc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.page-header p {
+    color: #888;
+    font-size: 1.1em;
+    margin: 0;
+}
+
+.balance-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+    border: 1px solid rgba(76, 201, 240, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 40px;
+}
+
+.balance-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.balance-label {
+    color: #888;
+    font-size: 1.05em;
+}
+
+.balance-amount {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #4cc9f0;
+}
+
+.btn-promo {
+    padding: 10px 20px;
+    background: rgba(76, 201, 240, 0.15);
+    color: #4cc9f0;
+    border: 1px solid rgba(76, 201, 240, 0.3);
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.btn-promo:hover {
+    background: rgba(76, 201, 240, 0.25);
+}
+
+.cases-section {
+    margin-bottom: 50px;
+}
+
+.section-header {
+    margin-bottom: 30px;
+}
+
+.section-header h2 {
+    font-size: 1.8em;
+    color: #e0e0e0;
+    margin: 0 0 10px 0;
+}
+
+.section-header p {
+    color: #888;
+    margin: 0;
+}
+
+.cases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.case-card {
+    position: relative;
+    background: linear-gradient(135deg, rgba(76, 201, 240, 0.08), rgba(168, 218, 220, 0.03));
+    border: 1px solid rgba(76, 201, 240, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.case-card:hover {
+    background: linear-gradient(135deg, rgba(76, 201, 240, 0.12), rgba(168, 218, 220, 0.06));
+    border-color: rgba(76, 201, 240, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(76, 201, 240, 0.15);
+}
+
+.case-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    z-index: 10;
+}
+
+.limited-badge {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.case-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.case-icon {
+    font-size: 2.5em;
+    line-height: 1;
+}
+
+.case-header h3 {
+    margin: 0;
+    font-size: 1.3em;
+    color: #e0e0e0;
+    flex: 1;
+}
+
+.case-description {
+    color: #888;
+    font-size: 0.9em;
+    margin: 0 0 15px 0;
+    line-height: 1.4;
+}
+
+.case-plans {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(76, 201, 240, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+    flex: 1;
+}
+
+.plans-label {
+    color: #888;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.plan-option {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(76, 201, 240, 0.1);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.plan-option:hover {
+    background: rgba(76, 201, 240, 0.05);
+}
+
+.plan-option:last-child {
+    border-bottom: none;
+}
+
+.plan-radio {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    accent-color: #4cc9f0;
+    cursor: pointer;
+}
+
+.plan-details {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85em;
+}
+
+.plan-name {
+    color: #a8dadc;
+}
+
+.plan-price {
+    color: #4cc9f0;
+    font-weight: 600;
+}
+
+.case-stats {
+    background: rgba(76, 201, 240, 0.08);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 0.85em;
+    color: #888;
+}
+
+.case-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 15px;
+    border-top: 1px solid rgba(76, 201, 240, 0.1);
+    margin-top: auto;
+}
+
+.case-price {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #4cc9f0;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #0c0c0c, #1a1a2e);
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    border-radius: 12px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid rgba(76, 201, 240, 0.1);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #e0e0e0;
+    font-size: 1.3em;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: #e0e0e0;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.plan-info-box {
+    background: rgba(76, 201, 240, 0.1);
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(76, 201, 240, 0.1);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    color: #888;
+}
+
+.info-value {
+    color: #4cc9f0;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #e0e0e0;
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+    font-size: 0.95em;
+    transition: all 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #4cc9f0;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.2);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #888;
+    font-size: 0.8em;
+}
+
+.warning-box {
+    background: rgba(251, 191, 36, 0.1);
+    border-left: 4px solid #fbbf24;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.warning-box h4 {
+    color: #fbbf24;
+    margin: 0 0 10px 0;
+}
+
+.warning-box ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.warning-box li {
+    color: #888;
+    padding: 4px 0;
+    font-size: 0.9em;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 10px;
+    padding: 20px;
+    border-top: 1px solid rgba(76, 201, 240, 0.1);
+}
+
+.btn-cancel,
+.btn-confirm {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+}
+
+.btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-confirm {
+    background: linear-gradient(135deg, #4361ee, #3a0ca3);
+    color: #fff;
+}
+
+.btn-confirm:hover {
+    background: linear-gradient(135deg, #3a0ca3, #3006a0);
+    transform: translateY(-2px);
+}
+
+.info-card {
+    background: rgba(76, 201, 240, 0.1);
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+}
+
+.info-card h3 {
+    color: #4cc9f0;
+    margin: 0 0 10px 0;
+}
+
+.info-card p {
+    color: #888;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .page-header h1 {
+        font-size: 1.6em;
+    }
+
+    .balance-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .cases-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-content {
+        width: 95%;
+    }
+}
+</style>
+
+<script>
+function selectPlan(caseId, casePlanId, planName, slots, hourlyPrice, casePrice) {
+    document.getElementById('casePlanId').value = casePlanId;
+    document.getElementById('planNameDisplay').textContent = planName;
+    document.getElementById('slotsDisplay').textContent = slots + ' слотов';
+    document.getElementById('hourlyPriceDisplay').textContent = hourlyPrice + '₽/ч';
+    document.getElementById('casePriceDisplay').textContent = casePrice + '₽';
+    document.getElementById('serverName').value = '';
+    document.getElementById('serverModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('serverModal').style.display = 'none';
+}
+
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('serverModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+});
+
+document.getElementById('serverForm').addEventListener('submit', function(e) {
+    const serverName = document.getElementById('serverName').value.trim();
+    if (!serverName) {
+        e.preventDefault();
+        alert('Введите название сервера');
+        return;
+    }
+});
+</script>
+{% endblock %}
