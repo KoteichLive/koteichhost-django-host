@@ -201,7 +201,7 @@ DEFAULT_SERVER_PORT = 'auto'
 
 # ==================== Ollama Configuration ====================
 # Нейросеть - НЕ ТРОГАТЬ
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'https://koteichcatalog.ru/ollama')
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'https://alog.ru/ollama')
 OLLAMA_USERNAME = os.getenv('OLLAMA_USERNAME', 'ollama')
 OLLAMA_PASSWORD = os.getenv('OLLAMA_PASSWORD', 'se123')
 DEFAULT_MODEL = os.getenv('DEFAULT_MODEL', 'llama3.2:3b')
